@@ -286,17 +286,27 @@ struct SimulatorXIBInspectorPane: View {
     private func codeTab(node: UIComponentNode) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Direct Swift Edit (\(node.fileName))")
+                Text("Live Component Swift Code")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(CompanionTheme.textSecondary)
                 Spacer()
-                Button("Apply Code to Xcode") {
-                    presenter.applyDirectCodeToXcode()
+                Button("Preview in 2D/3D") {
+                    presenter.applyDraftToPreview()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.mini)
+
+                Button("Apply to Xcode") {
+                    presenter.applyDirectCodeToXcode()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
                 .disabled(!presenter.hasProject)
             }
+
+            Text("Edit properties or constraints in Swift syntax below and click 'Preview in 2D/3D' to update the canvas live.")
+                .font(.system(size: 9.5))
+                .foregroundStyle(CompanionTheme.textMuted)
 
             CodeSurfaceContainer(padding: 8) {
                 TextEditor(text: $presenter.draftSourceSlice)
@@ -304,26 +314,29 @@ struct SimulatorXIBInspectorPane: View {
                     .lineSpacing(3)
                     .foregroundStyle(CompanionTheme.textPrimary)
                     .scrollContentBackground(.hidden)
-                    .frame(height: 280)
+                    .frame(height: 265)
             }
         }
     }
 
     private func actionsTab(node: UIComponentNode) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            FlowLayout(spacing: 6) {
-                Button("Tap in Simulator") {
-                    Task { await presenter.triggerComponentTapInSimulator() }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+        let isInteractiveKind = [.button, .control, .actionGrid, .cell].contains(node.kind)
+        return VStack(alignment: .leading, spacing: 10) {
+            if isInteractiveKind || !node.actions.isEmpty {
+                FlowLayout(spacing: 6) {
+                    Button("Tap in Simulator") {
+                        Task { await presenter.triggerComponentTapInSimulator() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
 
-                Button("Install Debug Bridge") {
-                    presenter.installDebugBridgeInProject()
+                    Button("Install Debug Bridge") {
+                        presenter.installDebugBridgeInProject()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(!presenter.hasProject)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!presenter.hasProject)
             }
 
             if !presenter.lastActionStatus.isEmpty {
@@ -333,10 +346,14 @@ struct SimulatorXIBInspectorPane: View {
             }
 
             if node.actions.isEmpty {
-                Text("No @IBAction, #selector, or SwiftUI Button actions detected in \(node.fileName). Use 'Tap in Simulator' to trigger at coordinates.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(CompanionTheme.textSecondary)
-                    .padding(.vertical, 8)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isInteractiveKind
+                         ? "No explicit @IBAction or #selector matched '\(node.name)' in \(node.fileName). You can trigger it directly via 'Tap in Simulator'."
+                         : "This component (\(node.kind.rawValue)) is a non-interactive view and has no bound action in code.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(CompanionTheme.textSecondary)
+                }
+                .padding(.vertical, 8)
             } else {
                 ForEach(node.actions) { act in
                     VStack(alignment: .leading, spacing: 6) {

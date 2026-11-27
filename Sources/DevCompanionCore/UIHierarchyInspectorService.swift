@@ -344,13 +344,10 @@ public struct UIHierarchyInspectorService: Sendable {
         var unusedSwiftSymbols = screenContext?.swiftComponents ?? []
 
         func claimSwiftSymbol(for kind: UIComponentNode.Kind, matchingText: String? = nil) -> ParsedSwiftUIComponent? {
-            if let matchingText,
-               let idx = unusedSwiftSymbols.firstIndex(where: {
-                   $0.name.localizedCaseInsensitiveContains(matchingText) || $0.snippet.localizedCaseInsensitiveContains(matchingText)
-               }) {
-                return unusedSwiftSymbols.remove(at: idx)
-            }
-            if let idx = unusedSwiftSymbols.firstIndex(where: { $0.kind == kind }) {
+            guard let matchingText, matchingText.count >= 3 else { return nil }
+            if let idx = unusedSwiftSymbols.firstIndex(where: {
+                $0.name.localizedCaseInsensitiveContains(matchingText) || $0.snippet.localizedCaseInsensitiveContains(matchingText)
+            }) {
                 return unusedSwiftSymbols.remove(at: idx)
             }
             return nil
@@ -359,7 +356,8 @@ public struct UIHierarchyInspectorService: Sendable {
         var nodes: [UIComponentNode] = [
             UIComponentNode(
                 id: "live-z0-root",
-                name: primaryMatch.map { "\($0.fileName.replacingOccurrences(of: ".swift", with: "")) Root" } ?? "\(appName) Live Screen",
+                className: "UIWindow",
+                name: primaryMatch.map { "\($0.fileName.replacingOccurrences(of: ".swift", with: "")) Window" } ?? "\(appName) Window",
                 kind: .window,
                 zLayer: 0,
                 normalizedX: 0.0,
@@ -369,7 +367,7 @@ public struct UIHierarchyInspectorService: Sendable {
                 fileName: primaryMatch?.fileName ?? "\(appName)Window.swift",
                 filePath: primaryMatch?.filePath,
                 lineNumber: primaryMatch?.lineNumber ?? 1,
-                codeSnippet: primaryMatch?.snippet ?? "UIWindow(frame: UIScreen.main.bounds) // Live Screen (\(appName))",
+                codeSnippet: primaryMatch?.snippet ?? "UIWindow(frame: UIScreen.main.bounds)",
                 displayText: appName,
                 accentHex: "#38BDF8",
                 cornerRadius: 24,
@@ -377,125 +375,130 @@ public struct UIHierarchyInspectorService: Sendable {
             )
         ]
 
-        // Z1: Detected rectangular UI containers, hero banners, cards & buttons from live pixels (deduplicated by IoU)
-        var acceptedRects: [CGRect] = []
-        for (idx, rect) in rectObs.enumerated() {
-            let box = rect.boundingBox
-            let x = max(0.01, min(0.95, Double(box.origin.x)))
-            let y = max(0.01, min(0.95, Double(1.0 - box.origin.y - box.height)))
-            let w = max(0.05, min(0.98 - x, Double(box.width)))
-            let h = max(0.03, min(0.98 - y, Double(box.height)))
-            guard w * h < 0.82, y >= 0.048 else { continue }
-
-            let candidateBox = CGRect(x: x, y: y, width: w, height: h)
-            guard !acceptedRects.contains(where: { Self.intersectionOverUnion($0, candidateBox) > 0.45 }) else {
-                continue
+        // Pre-extract clean, deduplicated OCR boxes first so rectangles know whether they are leaf banners or parent cards containing text
+        struct OCRItem {
+            let text: String
+            let rect: CGRect
+        }
+        var ocrItems: [OCRItem] = []
+        for obs in textObs {
+            guard let candidate = obs.topCandidates(1).first else { continue }
+            let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard text.count >= 2 else { continue }
+            let box = obs.boundingBox
+            let padX = 0.012
+            let padY = 0.008
+            let x = max(0.01, Double(box.origin.x) - padX)
+            let y = max(0.01, Double(1.0 - box.origin.y - box.height) - padY)
+            guard y >= 0.048 else { continue }
+            let w = max(0.06, min(0.98 - x, Double(box.width) + padX * 2))
+            let h = max(0.032, min(0.98 - y, Double(box.height) + padY * 2))
+            let candidateRect = CGRect(x: x, y: y, width: w, height: h)
+            let isDup = ocrItems.contains { existing in
+                Self.intersectionOverUnion(existing.rect, candidateRect) > 0.32
+                    || (existing.text.caseInsensitiveCompare(text) == .orderedSame && abs(existing.rect.midY - candidateRect.midY) < 0.06)
             }
-            acceptedRects.append(candidateBox)
+            if !isDup {
+                ocrItems.append(OCRItem(text: text, rect: candidateRect))
+            }
+        }
 
-            let kind: UIComponentNode.Kind = if h > 0.22 {
+        // Merge overlapping or fragmented Vision rectangles (e.g. hero banner strips)
+        var mergedRects: [CGRect] = []
+        for rect in rectObs {
+            let box = rect.boundingBox
+            let x = max(0.02, min(0.95, Double(box.origin.x)))
+            let y = max(0.05, min(0.95, Double(1.0 - box.origin.y - box.height)))
+            let w = max(0.08, min(0.96 - x, Double(box.width)))
+            let h = max(0.04, min(0.96 - y, Double(box.height)))
+            guard w * h < 0.78, w * h > 0.012 else { continue }
+            let candidate = CGRect(x: x, y: y, width: w, height: h)
+
+            if let mergeIdx = mergedRects.firstIndex(where: { existing in
+                let inter = existing.intersection(candidate)
+                let interArea = inter.isNull ? 0 : (inter.width * inter.height)
+                let minArea = min(existing.width * existing.height, candidate.width * candidate.height)
+                let sameHeroBand = (existing.minY < 0.50 && candidate.minY < 0.50 && abs(existing.midX - candidate.midX) < 0.22 && abs(existing.midY - candidate.midY) < 0.18)
+                return Self.intersectionOverUnion(existing, candidate) > 0.18 || (minArea > 0 && interArea / minArea > 0.45) || sameHeroBand
+            }) {
+                mergedRects[mergeIdx] = mergedRects[mergeIdx].union(candidate)
+            } else if mergedRects.count < 6 {
+                mergedRects.append(candidate)
+            }
+        }
+
+        for (idx, box) in mergedRects.enumerated() {
+            let containedTexts = ocrItems.filter { item in
+                box.insetBy(dx: -0.02, dy: -0.02).contains(CGPoint(x: item.rect.midX, y: item.rect.midY))
+            }
+            // If a rectangle contains multiple child labels/buttons (e.g. Fast Menu card with QRIS/BRIZZI/E Wallet/BRIVA),
+            // it MUST be a structural `.cardContainer` (translucent backing frame) so its screenshot isn't duplicated behind its children!
+            let kind: UIComponentNode.Kind = if containedTexts.count >= 2 {
+                .cardContainer
+            } else if box.height > 0.18 && box.minY < 0.55 {
                 .banner
-            } else if y > 0.72 && h < 0.14 {
+            } else if box.minY > 0.74 && box.height < 0.13 {
                 .button
             } else {
                 .cardContainer
             }
             let zLayer = kind == .button ? 3 : 1
-            let matchedSymbol = claimSwiftSymbol(for: kind)
-            let fallbackName = kind == .banner ? "HeroImageView" : (kind == .button ? "ActionButton" : "ContainerCardView")
+            let fallbackName = kind == .banner ? "HeroBannerImageView" : (kind == .button ? "PrimaryActionButton" : "SectionCardContainer")
 
             nodes.append(
                 UIComponentNode(
                     id: "live-rect-\(idx)",
-                    name: matchedSymbol?.name ?? fallbackName,
+                    className: kind == .banner ? "UIImageView" : (kind == .button ? "UIButton" : "UIView"),
+                    name: fallbackName,
                     kind: kind,
                     zLayer: zLayer,
-                    normalizedX: x,
-                    normalizedY: y,
-                    normalizedWidth: w,
-                    normalizedHeight: h,
-                    fileName: matchedSymbol?.fileName ?? primaryMatch?.fileName ?? "\(appName)View.swift",
-                    filePath: matchedSymbol?.filePath ?? primaryMatch?.filePath,
-                    lineNumber: matchedSymbol?.lineNumber ?? primaryMatch?.lineNumber ?? 1,
-                    codeSnippet: matchedSymbol?.snippet ?? primaryMatch?.snippet ?? "let \(fallbackName) = UIView() // (\(Int(x*100))%, \(Int(y*100))%)",
-                    displayText: matchedSymbol?.name ?? fallbackName,
+                    normalizedX: box.origin.x,
+                    normalizedY: box.origin.y,
+                    normalizedWidth: box.size.width,
+                    normalizedHeight: box.size.height,
+                    fileName: primaryMatch?.fileName ?? "\(appName)View.swift",
+                    filePath: primaryMatch?.filePath,
+                    lineNumber: primaryMatch?.lineNumber ?? 1,
+                    codeSnippet: primaryMatch?.snippet ?? "let \(fallbackName) = UIView()",
+                    displayText: fallbackName,
                     accentHex: kind == .button ? "#007AFF" : "#6366F1",
                     cornerRadius: 12,
                     fontSize: 12
                 )
             )
-            if acceptedRects.count >= 10 { break }
         }
 
-        // Z2/Z3: All visible text & interactive CTA buttons recognized from the live iPhone/Simulator screen (excluding iOS status bar y < 0.048)
-        for (idx, obs) in textObs.enumerated() {
-            guard let candidate = obs.topCandidates(1).first else { continue }
-            let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { continue }
-
-            let box = obs.boundingBox
-            let padX = 0.015
-            let padY = 0.010
-            let x = max(0.01, Double(box.origin.x) - padX)
-            let y = max(0.01, Double(1.0 - box.origin.y - box.height) - padY)
-            guard y >= 0.045 else { continue } // skip iOS status-bar clock/battery noise
-            let w = max(0.08, min(0.98 - x, Double(box.width) + padX * 2))
-            let h = max(0.035, min(0.98 - y, Double(box.height) + padY * 2))
-
+        for (idx, item) in ocrItems.enumerated() {
+            let text = item.text
+            let r = item.rect
             let lower = text.lowercased()
-            let isNav = y < 0.14
-            let isButton = (y > 0.75) || lower.contains("login") || lower.contains("masuk") || lower.contains("kontak") || lower.contains("submit") || lower.contains("daftar")
-            let kind: UIComponentNode.Kind = isNav ? .navigationBar : (isButton ? .button : .label)
+            let isNav = r.minY < 0.13
+            let isButton = (r.minY > 0.75) || lower == "login" || lower == "masuk" || lower.contains("fast menu")
+            let kind: UIComponentNode.Kind = isNav ? .label : (isButton ? .button : .label)
             let zLayer = isNav ? 2 : 3
             let sourceMatch = textSourceMatches[text] ?? primaryMatch
             let matchedSymbol = claimSwiftSymbol(for: kind, matchingText: text)
-            let displayTitle = matchedSymbol.map { "\(text) (\($0.name))" } ?? text
+            let cleanTitle = matchedSymbol.map { "\(text) (\($0.name))" } ?? text
 
             nodes.append(
                 UIComponentNode(
                     id: "live-ocr-\(idx)-\(text.prefix(12))",
-                    name: displayTitle,
+                    className: isButton ? "UIButton" : "UILabel",
+                    name: cleanTitle,
                     kind: kind,
                     zLayer: zLayer,
-                    normalizedX: x,
-                    normalizedY: y,
-                    normalizedWidth: w,
-                    normalizedHeight: h,
+                    normalizedX: r.origin.x,
+                    normalizedY: r.origin.y,
+                    normalizedWidth: r.size.width,
+                    normalizedHeight: r.size.height,
                     fileName: matchedSymbol?.fileName ?? sourceMatch?.fileName ?? "\(appName)View.swift",
                     filePath: matchedSymbol?.filePath ?? sourceMatch?.filePath,
                     lineNumber: matchedSymbol?.lineNumber ?? sourceMatch?.lineNumber ?? 1,
-                    codeSnippet: matchedSymbol?.snippet ?? sourceMatch?.snippet ?? "// Live UI Element: \"\(text)\"",
+                    codeSnippet: matchedSymbol?.snippet ?? sourceMatch?.snippet ?? "view.text = \"\(text)\"",
                     displayText: text,
                     accentHex: isButton ? "#0A84FF" : (isNav ? "#34D399" : "#F59F00"),
                     cornerRadius: isButton ? 12 : 8,
                     fontSize: isButton ? 14 : 12
-                )
-            )
-        }
-
-        // Include unclaimed UIKit/SwiftUI structural containers & controls (UITableView, UICollectionView, UIStackView, UIScrollView, Cell, etc.)
-        for (symIdx, sym) in unusedSwiftSymbols.prefix(18).enumerated() {
-            let rowY = min(0.85, 0.12 + Double(symIdx % 7) * 0.11)
-            let isContainer = [.tableView, .collectionView, .scrollView, .stackView, .cardContainer].contains(sym.kind)
-            nodes.append(
-                UIComponentNode(
-                    id: "swift-sym-\(symIdx)-\(sym.name)",
-                    className: sym.kind.rawValue,
-                    name: sym.name,
-                    kind: sym.kind,
-                    zLayer: sym.kind.defaultZLayer,
-                    normalizedX: isContainer ? 0.04 : 0.08,
-                    normalizedY: isContainer ? 0.12 : rowY,
-                    normalizedWidth: isContainer ? 0.92 : 0.84,
-                    normalizedHeight: isContainer ? 0.78 : 0.08,
-                    fileName: sym.fileName,
-                    filePath: sym.filePath,
-                    lineNumber: sym.lineNumber,
-                    codeSnippet: sym.snippet,
-                    displayText: sym.name,
-                    accentHex: isContainer ? "#6366F1" : "#38BDF8",
-                    cornerRadius: isContainer ? 12 : 8,
-                    fontSize: 12
                 )
             )
         }
@@ -1028,17 +1031,132 @@ public struct UIHierarchyInspectorService: Sendable {
         return result
     }
 
-    public func discoverActions(in source: String, componentName: String? = nil) -> [ComponentActionBinding] {
+    public func generateLiveComponentCode(for node: UIComponentNode) -> String {
+        let topStr = node.constraints.top.map { "\(Int($0.rounded()))" } ?? "nil"
+        let leadStr = node.constraints.leading.map { "\(Int($0.rounded()))" } ?? "nil"
+        let trailStr = node.constraints.trailing.map { "\(Int($0.rounded()))" } ?? "nil"
+        let botStr = node.constraints.bottom.map { "\(Int($0.rounded()))" } ?? "nil"
+        let wStr = node.constraints.width.map { "\(Int($0.rounded()))" } ?? "nil"
+        let hStr = node.constraints.height.map { "\(Int($0.rounded()))" } ?? "nil"
+
+        return """
+        // Component: \(node.name) (\(node.className))
+        // Source: \(node.locationLabel)
+        \(node.codeSnippet)
+
+        // Editable Live Properties (Preview in 2D/3D & Apply to Xcode):
+        view.text = "\(node.displayText)"
+        view.accentHex = "\(node.accentHex)"
+        view.backgroundHex = "\(node.backgroundHex)"
+        view.layer.cornerRadius = \(Int(node.cornerRadius.rounded()))
+        view.layer.borderWidth = \(String(format: "%.1f", node.borderWidth))
+        view.font = .systemFont(ofSize: \(Int(node.fontSize.rounded())))
+        view.alpha = \(String(format: "%.2f", node.opacity))
+        view.isHidden = \(node.isHidden)
+        view.clipsToBounds = \(node.clipsToBounds)
+        view.isUserInteractionEnabled = \(node.isUserInteractionEnabled)
+
+        // Editable AutoLayout Constants (pt or nil):
+        constraint.top = \(topStr)
+        constraint.leading = \(leadStr)
+        constraint.trailing = \(trailStr)
+        constraint.bottom = \(botStr)
+        constraint.width = \(wStr)
+        constraint.height = \(hStr)
+        """
+    }
+
+    public func applyLiveComponentCode(_ code: String, to node: UIComponentNode) -> UIComponentNode {
+        var updated = node
+        for raw in code.components(separatedBy: .newlines) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard !line.hasPrefix("//"), !line.isEmpty else { continue }
+
+            if line.contains("view.text"), let str = Self.extractQuotedString(from: line) {
+                updated.displayText = str
+            } else if line.contains("view.accentHex"), let str = Self.extractQuotedString(from: line) {
+                updated.accentHex = str
+            } else if line.contains("view.backgroundHex"), let str = Self.extractQuotedString(from: line) {
+                updated.backgroundHex = str
+            } else if line.contains("cornerRadius"), let val = Self.extractTrailingNumber(in: line) {
+                updated.cornerRadius = val
+            } else if line.contains("borderWidth"), let val = Self.extractTrailingNumber(in: line) {
+                updated.borderWidth = val
+            } else if line.contains("ofSize:"), let val = Self.extractNumberAfter("ofSize:", in: line) {
+                updated.fontSize = val
+            } else if line.contains("view.alpha"), let val = Self.extractTrailingNumber(in: line) {
+                updated.opacity = max(0.05, min(1.0, val))
+            } else if line.contains("view.isHidden") {
+                updated.isHidden = line.contains("true")
+            } else if line.contains("view.clipsToBounds") {
+                updated.clipsToBounds = line.contains("true")
+            } else if line.contains("view.isUserInteractionEnabled") {
+                updated.isUserInteractionEnabled = line.contains("true")
+            } else if line.hasPrefix("constraint.top") {
+                updated.constraints.top = Self.extractTrailingNumber(in: line)
+            } else if line.hasPrefix("constraint.leading") {
+                updated.constraints.leading = Self.extractTrailingNumber(in: line)
+            } else if line.hasPrefix("constraint.trailing") {
+                updated.constraints.trailing = Self.extractTrailingNumber(in: line)
+            } else if line.hasPrefix("constraint.bottom") {
+                updated.constraints.bottom = Self.extractTrailingNumber(in: line)
+            } else if line.hasPrefix("constraint.width") {
+                updated.constraints.width = Self.extractTrailingNumber(in: line)
+            } else if line.hasPrefix("constraint.height") {
+                updated.constraints.height = Self.extractTrailingNumber(in: line)
+            }
+        }
+        return updated
+    }
+
+    private static func extractTrailingNumber(in line: String) -> Double? {
+        guard !line.contains("nil") else { return nil }
+        guard let eq = line.range(of: "=") else { return nil }
+        let rhs = line[eq.upperBound...].trimmingCharacters(in: .whitespaces)
+        return Double(rhs)
+    }
+
+    private static func extractNumberAfter(_ prefix: String, in line: String) -> Double? {
+        guard let r = line.range(of: prefix) else { return nil }
+        let rest = line[r.upperBound...].trimmingCharacters(in: .whitespaces)
+        let digits = rest.prefix { $0.isNumber || $0 == "." || $0 == "-" }
+        return Double(digits)
+    }
+
+    public func discoverActions(
+        in source: String,
+        componentName: String? = nil,
+        displayText: String? = nil,
+        kind: UIComponentNode.Kind? = nil
+    ) -> [ComponentActionBinding] {
+        // Non-interactive views (labels, images, banners, containers) should NEVER inherit unrelated ViewController actions!
+        let interactiveKinds: Set<UIComponentNode.Kind> = [.button, .control, .actionGrid, .cell]
+        if let kind, !interactiveKinds.contains(kind) {
+            return []
+        }
+
         let lines = source.components(separatedBy: .newlines)
         var found: [ComponentActionBinding] = []
         var seen: Set<String> = []
+
+        let tokens: [String] = [componentName, displayText]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.count >= 3 && $0 != "ActionButton" && $0 != "PrimaryActionButton" }
 
         for (idx, raw) in lines.enumerated() {
             let lineNo = idx + 1
             let trimmed = raw.trimmingCharacters(in: .whitespaces)
 
+            let matchesComponent: Bool = if tokens.isEmpty {
+                true
+            } else {
+                tokens.contains { tok in
+                    trimmed.localizedCaseInsensitiveContains(tok)
+                }
+            }
+
             // 1. @IBAction func foo(_ sender: Any)
-            if trimmed.contains("@IBAction"), let fn = Self.extractFuncName(in: trimmed) {
+            if trimmed.contains("@IBAction"), let fn = Self.extractFuncName(in: trimmed), matchesComponent {
                 let snippet = Self.sliceFunctionBody(lines: lines, startIndex: idx)
                 let key = "ib::\(fn)"
                 if seen.insert(key).inserted {
@@ -1047,7 +1165,7 @@ public struct UIHierarchyInspectorService: Sendable {
             }
 
             // 2. .addTarget(..., action: #selector(foo))
-            if trimmed.contains("addTarget("), let sel = Self.extractSelectorName(in: trimmed) {
+            if trimmed.contains("addTarget("), let sel = Self.extractSelectorName(in: trimmed), matchesComponent {
                 let key = "target::\(sel)"
                 if seen.insert(key).inserted {
                     found.append(ComponentActionBinding(name: sel, kind: .addTarget, selectorName: sel, lineNumber: lineNo, bodySnippet: trimmed))
@@ -1055,7 +1173,7 @@ public struct UIHierarchyInspectorService: Sendable {
             }
 
             // 3. UITapGestureRecognizer(target: ..., action: #selector(foo))
-            if trimmed.contains("GestureRecognizer"), let sel = Self.extractSelectorName(in: trimmed) {
+            if trimmed.contains("GestureRecognizer"), let sel = Self.extractSelectorName(in: trimmed), matchesComponent {
                 let key = "gesture::\(sel)"
                 if seen.insert(key).inserted {
                     found.append(ComponentActionBinding(name: sel, kind: .gesture, selectorName: sel, lineNumber: lineNo, bodySnippet: trimmed))
@@ -1063,7 +1181,7 @@ public struct UIHierarchyInspectorService: Sendable {
             }
 
             // 4. SwiftUI Button(action: ...) or Button("Title") { ... }
-            if trimmed.hasPrefix("Button(") || trimmed.contains(" Button(") {
+            if (trimmed.hasPrefix("Button(") || trimmed.contains(" Button(")), matchesComponent {
                 let snippet = Self.sliceFunctionBody(lines: lines, startIndex: idx)
                 let label = Self.extractQuotedString(from: trimmed) ?? componentName ?? "Button Action"
                 let key = "swiftui::\(lineNo)::\(label)"

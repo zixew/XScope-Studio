@@ -173,7 +173,14 @@ final class SimulatorPresenter {
     var pitchAngleDegrees: Double = 8
     var layerSpacing: Double = 32
     var canvasZoom: Double = 1.0
-    var showWireframesOnly: Bool = false
+    var showWireframesOnly: Bool = false {
+        didSet {
+            let targetMode: HierarchyDisplayMode = showWireframesOnly ? .wireframes : .wireframesAndContents
+            if displayMode != targetMode && (displayMode == .wireframes || showWireframesOnly) {
+                displayMode = targetMode
+            }
+        }
+    }
     var displayMode: HierarchyDisplayMode = .wireframesAndContents
     var minDepthRatio: Double = 0.0
     var maxDepthRatio: Double = 1.0
@@ -517,35 +524,46 @@ final class SimulatorPresenter {
     }
 
     func loadDraftForSelection() {
-        guard var node = selectedNode else {
+        guard let idx = selectedNodeIndex else {
             draftNode = nil
             originalSourceSlice = ""
             draftSourceSlice = ""
             return
         }
+        var node = componentNodes[idx]
         let resolvedPath = node.filePath ?? router.projectURL.flatMap { router.findFile(named: node.fileName, in: $0)?.path }
         if let path = resolvedPath,
            let fullSource = try? String(contentsOfFile: path, encoding: .utf8) {
-            if node.actions.isEmpty {
-                node.actions = hierarchyInspector.discoverActions(in: fullSource, componentName: node.name)
-            }
+            node.actions = hierarchyInspector.discoverActions(
+                in: fullSource,
+                componentName: node.name,
+                displayText: node.displayText,
+                kind: node.kind
+            )
             if node.constraints == ComponentConstraints() {
                 node.constraints = hierarchyInspector.parseConstraints(in: fullSource, aroundLine: node.lineNumber)
             }
-            let slice = hierarchyInspector.loadSurroundingSource(filePath: path, lineNumber: node.lineNumber, radius: 14) ?? node.codeSnippet
-            originalSourceSlice = slice
-            draftSourceSlice = slice
         } else {
-            originalSourceSlice = node.codeSnippet
-            draftSourceSlice = node.codeSnippet
+            node.actions = []
         }
+        // Persist read-only discovered metadata onto componentNodes[idx] so selecting a node NEVER triggers a false "Unapplied Draft"
+        componentNodes[idx] = node
+        let liveCode = hierarchyInspector.generateLiveComponentCode(for: node)
+        originalSourceSlice = liveCode
+        draftSourceSlice = liveCode
         draftNode = node
     }
 
     func applyDraftToPreview() {
         guard let idx = selectedNodeIndex, var draft = draftNode else { return }
+        if draftSourceSlice != originalSourceSlice {
+            draft = hierarchyInspector.applyLiveComponentCode(draftSourceSlice, to: draft)
+        }
         draft.isEdited = true
         componentNodes[idx] = draft
+        let updatedCode = hierarchyInspector.generateLiveComponentCode(for: draft)
+        originalSourceSlice = updatedCode
+        draftSourceSlice = updatedCode
         draftNode = draft
         router.statusMessage = "Applied preview for \(draft.name)"
         Task {
@@ -563,30 +581,15 @@ final class SimulatorPresenter {
     }
 
     func applyDirectCodeToXcode() {
-        guard let idx = selectedNodeIndex else { return }
-        let node = componentNodes[idx]
-        let filePath = node.filePath ?? router.projectURL.flatMap { router.findFile(named: node.fileName, in: $0)?.path }
-        guard let path = filePath else {
-            router.statusMessage = AppStrings.Performance.noFindingForXcode
-            return
-        }
-        guard draftSourceSlice != originalSourceSlice else {
-            applyComponentChangesToSwiftCode()
-            return
-        }
-        do {
-            let record = try interactor.applyComponentPatch(
-                to: URL(fileURLWithPath: path),
-                oldSnippet: originalSourceSlice,
-                newSnippet: draftSourceSlice,
-                lineNumber: node.lineNumber
-            )
-            lastComponentRevertRecord = record
-            originalSourceSlice = draftSourceSlice
-            router.statusMessage = AppStrings.Performance.patchAppliedToFile(node.fileName)
-        } catch {
-            router.statusMessage = error.localizedDescription
-        }
+        guard let idx = selectedNodeIndex, var draft = draftNode else { return }
+        draft = hierarchyInspector.applyLiveComponentCode(draftSourceSlice, to: draft)
+        draft.isEdited = true
+        componentNodes[idx] = draft
+        let updatedCode = hierarchyInspector.generateLiveComponentCode(for: draft)
+        originalSourceSlice = updatedCode
+        draftSourceSlice = updatedCode
+        draftNode = draft
+        applyComponentChangesToSwiftCode()
     }
 
     func checkBridgeStatus() async {

@@ -61,11 +61,49 @@ struct SimulatorXIBAndActionTests {
             }
         }
         """
-        let actions = UIHierarchyInspectorService().discoverActions(in: source, componentName: "loginButton")
+        let actions = UIHierarchyInspectorService().discoverActions(in: source)
         #expect(actions.contains(where: { $0.kind == .addTarget && $0.selectorName == "handleLoginTap" }))
         #expect(actions.contains(where: { $0.kind == .gesture && $0.selectorName == "handleCardTap" }))
         #expect(actions.contains(where: { $0.kind == .ibAction && $0.selectorName == "didTapForgotPassword" }))
         #expect(actions.contains(where: { $0.kind == .swiftUIButton && $0.name == "Continue" }))
+
+        // Non-interactive views (e.g. UILabel / UIImageView) must NOT show unrelated ViewController actions
+        let labelActions = UIHierarchyInspectorService().discoverActions(in: source, componentName: "titleLabel", displayText: "BRIVA", kind: .label)
+        #expect(labelActions.isEmpty)
+    }
+
+    @Test("UIHierarchyInspectorService bidirectional live component code updates node properties and constraints")
+    func bidirectionalLiveComponentCode() {
+        let service = UIHierarchyInspectorService()
+        let node = UIComponentNode(
+            name: "loginButton",
+            kind: .button,
+            normalizedX: 0.1,
+            normalizedY: 0.8,
+            normalizedWidth: 0.8,
+            normalizedHeight: 0.08,
+            fileName: "LoginVC.swift",
+            lineNumber: 42,
+            codeSnippet: "let loginButton = UIButton()",
+            displayText: "Login",
+            accentHex: "#007AFF",
+            cornerRadius: 12,
+            fontSize: 14,
+            opacity: 1.0
+        )
+        let generated = service.generateLiveComponentCode(for: node)
+        #expect(generated.contains("view.text = \"Login\""))
+        #expect(generated.contains("view.layer.cornerRadius = 12"))
+
+        let editedCode = generated
+            .replacingOccurrences(of: "view.text = \"Login\"", with: "view.text = \"Masuk Sekarang\"")
+            .replacingOccurrences(of: "view.layer.cornerRadius = 12", with: "view.layer.cornerRadius = 22")
+            .replacingOccurrences(of: "constraint.top = nil", with: "constraint.top = 36")
+
+        let updated = service.applyLiveComponentCode(editedCode, to: node)
+        #expect(updated.displayText == "Masuk Sekarang")
+        #expect(updated.cornerRadius == 22)
+        #expect(updated.constraints.top == 36)
     }
 
     @Test("XScopeDebugBridgeService generates #if DEBUG bridge with invoke, mutate, and hierarchy endpoints")

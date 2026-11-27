@@ -240,14 +240,19 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 mat.isDoubleSided = true
                 mat.lightingModel = .constant
 
-                if isContainer {
-                    // Xcode-style stepped matte backing card for structural containers (NEVER duplicating child screenshot pixels!)
-                    if showContents {
-                        let shade = max(0.72, 0.95 - Double(containerOrder) * 0.055)
-                        mat.diffuse.contents = NSColor(srgbRed: shade, green: shade + 0.01, blue: min(1.0, shade + 0.03), alpha: 0.94)
+                if node.kind == .window {
+                    // Root UIWindow plane at the very back: shows base screen context in Contents/Both mode, or dark frame in Wireframes mode
+                    if showContents, let fullImage {
+                        mat.diffuse.contents = fullImage
+                        mat.transparency = 0.88
                     } else {
-                        mat.diffuse.contents = NSColor.white.withAlphaComponent(0.03)
+                        mat.diffuse.contents = NSColor(srgbRed: 0.08, green: 0.10, blue: 0.14, alpha: 0.55)
                     }
+                    containerOrder += 1
+                } else if isContainer {
+                    // Intermediate structural containers (Card, TableView, CollectionView, StackView):
+                    // Render as clean translucent frosted-glass / wireframe planes (NEVER opaque grey blocks or duplicated child screenshots!)
+                    mat.diffuse.contents = NSColor(srgbRed: 0.78, green: 0.84, blue: 0.94, alpha: showContents ? 0.14 : 0.04)
                     containerOrder += 1
                 } else if node.isEdited {
                     mat.diffuse.contents = Self.renderEditedTexture(node: node, size: CGSize(width: max(140, w * 90), height: max(48, h * 90)))
@@ -281,8 +286,8 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     scnNode.addChildNode(borderNode)
                 }
 
-                // Xcode Top Header Tab Banner above structural containers (UIWindow, ViewController, UITableView, UIStackView, etc.)
-                if (showLabels || isContainer) && (isContainer || isSelected) {
+                // Xcode Top Header Tab Banner: controlled by `showLabels` (or shown on the single currently selected component)
+                if (showLabels && isContainer) || isSelected {
                     let tabH: CGFloat = 0.21
                     let tabW: CGFloat = min(w, max(1.35, CGFloat(node.name.count) * 0.072 + 0.45))
                     let tabPlane = SCNPlane(width: tabW, height: tabH)
