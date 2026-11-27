@@ -354,4 +354,41 @@ struct SimulatorXIBAndActionTests {
         let crops = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: [leaf]) } ?? [:]
         #expect(crops["leaf-1"] != nil)
     }
+
+    @Test("TC-AUT-027: DiagnosticService filters out consumer third-party apps (WhatsApp, Discord) for Developer Apps Only policy")
+    func testDiagnosticServiceFiltersThirdPartyApps() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("DevAppsOnly_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try "crash".write(to: dir.appendingPathComponent("WhatsApp-2026-11-27-100000.ips"), atomically: true, encoding: .utf8)
+        try "crash".write(to: dir.appendingPathComponent("Discord-2026-11-27-100001.ips"), atomically: true, encoding: .utf8)
+        try "crash".write(to: dir.appendingPathComponent("BRImoDev-2026-11-27-100002.ips"), atomically: true, encoding: .utf8)
+
+        let svc = DiagnosticService()
+        // When includeSystemReports is false, WhatsApp and Discord are in nonDeveloperAppBlocklist and get excluded
+        let filtered = svc.loadRecentReports(
+            projectName: "Brimo-ios",
+            simulatorAppNames: ["BRImoDev"],
+            allowedDeveloperAppNames: ["brimodev"],
+            includeSystemReports: false,
+            directory: dir
+        )
+        #expect(filtered.count == 1)
+        #expect(filtered.first?.processName == "BRImoDev")
+    }
+
+    @Test("TC-AUT-028: UIHierarchyInspectorService detects SpringBoard Home Screen with token matching and prevents privacy leakage")
+    func testSpringBoardHomeScreenFuzzyDetection() {
+        // Sample OCR tokens typical of iOS Home Screen (as shown in user screenshot)
+        let homeScreenTokens = [
+            "Find My", "WhatsApp", "Shopee", "Google Calendar", "BCA mobile",
+            "Access By KAI", "ChatGPT", "Photos", "App Store"
+        ]
+        #expect(UIHierarchyInspectorService.isSpringBoardHomeScreen(visibleTexts: homeScreenTokens))
+
+        // Single isolated match should NOT trigger false positive
+        let inAppTokens = ["OpenDPLKConfirmationVC Window", "SectionCardContainer", "Konfirmasi", "Lanjut", "Nominal Rp 50.000"]
+        #expect(!UIHierarchyInspectorService.isSpringBoardHomeScreen(visibleTexts: inAppTokens))
+    }
 }

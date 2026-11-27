@@ -155,6 +155,7 @@ public struct DiagnosticService: Sendable {
         limit: Int = 25,
         projectName: String? = nil,
         simulatorAppNames: [String] = [],
+        allowedDeveloperAppNames: Set<String>? = nil,
         includeSystemReports: Bool = false,
         directory: URL? = nil
     ) -> [DiagnosticReportItem] {
@@ -196,6 +197,7 @@ public struct DiagnosticService: Sendable {
 
         let normalizedProject = projectName?.lowercased()
         let normalizedSimApps = Set(simulatorAppNames.map { $0.lowercased() })
+        let normalizedAllowedDev = allowedDeveloperAppNames.map { Set($0.map { $0.lowercased() }) }
 
         var items: [DiagnosticReportItem] = []
         for url in sorted {
@@ -218,9 +220,19 @@ public struct DiagnosticService: Sendable {
             let procLower = processName.lowercased()
             let matchesProject = normalizedProject.map { procLower.contains($0) || $0.contains(procLower) } ?? false
             let matchesSimApp = normalizedSimApps.contains(procLower)
+            let matchesAllowedDev = normalizedAllowedDev?.contains(where: { procLower.contains($0) || $0.contains(procLower) }) ?? false
+            let isKnownNonDev = ProcessTelemetryService.nonDeveloperAppBlocklist.contains(procLower)
+            let hasDevContext = (normalizedProject != nil) || !normalizedSimApps.isEmpty || (normalizedAllowedDev != nil)
 
-            if !includeSystemReports && isSys && !matchesProject && !matchesSimApp {
-                continue
+            if !includeSystemReports {
+                // Fail-closed Developer Apps Only privacy gate:
+                // Never expose system daemons or consumer/third-party apps (e.g. WhatsApp, Discord, Chrome, Spotify)
+                if isSys || isKnownNonDev {
+                    continue
+                }
+                if hasDevContext && !matchesProject && !matchesSimApp && !matchesAllowedDev {
+                    continue
+                }
             }
 
             let meta = Self.extractQuickMetadata(from: url, kind: kind, processName: processName)

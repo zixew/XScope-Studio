@@ -5,7 +5,12 @@ import DevCompanionCore
 
 // MARK: - Performance & Instruments VIPER
 protocol PerformanceInteractorProtocol: Sendable {
-    func loadDiagnosticReports(projectName: String?, simulatorAppNames: [String], includeSystemReports: Bool) -> [DiagnosticReportItem]
+    func loadDiagnosticReports(
+        projectName: String?,
+        simulatorAppNames: [String],
+        allowedDeveloperAppNames: Set<String>?,
+        includeSystemReports: Bool
+    ) -> [DiagnosticReportItem]
     func readReportContent(at path: String) -> String
     func analyzeCrashReport(content: String, processName: String) -> CrashAnalysisReport
     func locateCrashSource(fileName: String, lineNumber: Int?, in projectURL: URL) -> CrashSourceSnippet?
@@ -53,10 +58,16 @@ struct PerformanceInteractor: PerformanceInteractorProtocol {
         self.secretStore = secretStore
     }
 
-    func loadDiagnosticReports(projectName: String?, simulatorAppNames: [String], includeSystemReports: Bool) -> [DiagnosticReportItem] {
+    func loadDiagnosticReports(
+        projectName: String?,
+        simulatorAppNames: [String],
+        allowedDeveloperAppNames: Set<String>? = nil,
+        includeSystemReports: Bool
+    ) -> [DiagnosticReportItem] {
         diagnosticService.loadRecentReports(
             projectName: projectName,
             simulatorAppNames: simulatorAppNames,
+            allowedDeveloperAppNames: allowedDeveloperAppNames,
             includeSystemReports: includeSystemReports
         )
     }
@@ -401,7 +412,10 @@ final class PerformancePresenter {
     }
 
     func refreshReportsAndProcesses() async {
-        var combinedProcesses = await interactor.listSimulatorProcesses()
+        let rawSimProcs = await interactor.listSimulatorProcesses()
+        var combinedProcesses = rawSimProcs.filter {
+            $0.isUserApp && ($0.isBuiltByXcode || $0.isBeingDebuggedByXcode) && !ProcessTelemetryService.nonDeveloperAppBlocklist.contains($0.name.lowercased())
+        }
         let devicesToInspect: [PhysicalDevice] = if let selectedDev = router.selectedPhysicalDevice {
             [selectedDev]
         } else {
@@ -409,12 +423,17 @@ final class PerformancePresenter {
         }
         for dev in devicesToInspect {
             let devProcs = await interactor.listPhysicalDeviceProcesses(deviceID: dev.id, deviceName: dev.name)
-            combinedProcesses.append(contentsOf: devProcs)
+            let filteredDev = devProcs.filter {
+                $0.isUserApp && ($0.isBuiltByXcode || $0.isBeingDebuggedByXcode) && !ProcessTelemetryService.nonDeveloperAppBlocklist.contains($0.name.lowercased())
+            }
+            combinedProcesses.append(contentsOf: filteredDev)
         }
         simulatorProcesses = combinedProcesses
+        let localDevApps = ProcessTelemetryService.discoverLocalXcodeBuiltAppNames(projectURL: router.projectURL)
         diagnosticReports = interactor.loadDiagnosticReports(
             projectName: router.projectURL?.lastPathComponent,
             simulatorAppNames: simulatorProcesses.map(\.name),
+            allowedDeveloperAppNames: localDevApps,
             includeSystemReports: showSystemReports
         )
         if let firstHang = diagnosticReports.first(where: { $0.kind == .hang }) {
@@ -497,9 +516,11 @@ final class PerformancePresenter {
             guard !Task.isCancelled else { return }
             self.runtimeLeakSnapshot = snapshot
 
+            let localDevApps = ProcessTelemetryService.discoverLocalXcodeBuiltAppNames(projectURL: self.router.projectURL)
             let reports = self.interactor.loadDiagnosticReports(
                 projectName: self.router.projectURL?.lastPathComponent,
                 simulatorAppNames: self.simulatorProcesses.map(\.name),
+                allowedDeveloperAppNames: localDevApps,
                 includeSystemReports: self.showSystemReports
             )
             guard !Task.isCancelled else { return }

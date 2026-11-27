@@ -448,7 +448,7 @@ public struct ProcessTelemetryService: Sendable {
         return targetApps
     }
 
-    private static let nonDeveloperAppBlocklist: Set<String> = [
+    public static let nonDeveloperAppBlocklist: Set<String> = [
         "mobilecal", "mobilesafari", "mobiletimer", "photos", "testflight",
         "whatsapp", "discord", "telegram", "duolingomobile", "globalprotect",
         "vysor", "preferences", "springboard", "shortcuts", "files",

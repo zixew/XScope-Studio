@@ -290,14 +290,17 @@ public struct UIHierarchyInspectorService: Sendable {
         buildHierarchy(for: process, screenshotURL: nil, in: projectURL)
     }
 
-    private static let springBoardHomeLabels: Set<String> = [
+    private static let springBoardHomeLabels: [String] = [
         "find my", "shortcuts", "files", "contacts", "settings", "app store",
         "safari", "photos", "camera", "clock", "calendar", "google calendar",
         "whatsapp", "instagram", "tiktok", "shopee", "chatgpt", "discord",
         "telegram", "music", "video", "wallet", "weather", "notes",
         "reminders", "mail", "testflight", "maps", "podcasts", "health",
         "fitness", "tips", "bca mobile", "mybca", "mytelkomsel",
-        "access by kai", "mobile legends", "duolingo", "vysor"
+        "access by kai", "mobile legends", "duolingo", "vysor",
+        "tokopedia", "grab", "gojek", "dana", "ovo", "lazada", "blibli",
+        "spotify", "youtube", "netflix", "gmail", "chrome", "facebook",
+        "indomaret poinku", "qita by bri", "authenticator", "threads", "linkedin"
     ]
 
     /// Computes the full UIKit/SwiftUI class inheritance chain for the Xcode Object Inspector.
@@ -368,12 +371,16 @@ public struct UIHierarchyInspectorService: Sendable {
         var matchedHomeIcons: Set<String> = []
         for raw in visibleTexts {
             let clean = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            guard clean.count >= 3 else { continue }
-            if springBoardHomeLabels.contains(clean) {
-                matchedHomeIcons.insert(clean)
+                .replacingOccurrences(of: "\n", with: " ")
+            guard clean.count >= 2 else { continue }
+            for label in springBoardHomeLabels {
+                if clean == label || clean.contains(label) || (label.contains(clean) && clean.count >= 4) {
+                    matchedHomeIcons.insert(label)
+                    break
+                }
             }
         }
-        return matchedHomeIcons.count >= 3
+        return matchedHomeIcons.count >= 2
     }
 
     /// Builds a real-time 2D/3D UI hierarchy directly from the live captured iPhone/Simulator screenshot using Apple Vision OCR & Rectangle Detection,

@@ -192,14 +192,20 @@ final class CrashlyticsPresenter {
 
         let interactorRef = interactor
         let projName = router.projectURL?.lastPathComponent
+        let projURL = router.projectURL
         let includeSys = showSystemReports
         let prevBaseline = baselineReportIDs
 
         let loaded = await Task.detached {
-            let procs = await interactorRef.listSimulatorProcesses()
+            let localDevApps = ProcessTelemetryService.discoverLocalXcodeBuiltAppNames(projectURL: projURL)
+            let rawProcs = await interactorRef.listSimulatorProcesses()
+            let devProcs = rawProcs.filter {
+                $0.isUserApp && ($0.isBuiltByXcode || $0.isBeingDebuggedByXcode) && !ProcessTelemetryService.nonDeveloperAppBlocklist.contains($0.name.lowercased())
+            }
             var items = interactorRef.loadDiagnosticReports(
                 projectName: projName,
-                simulatorAppNames: procs.map(\.name),
+                simulatorAppNames: devProcs.map(\.name),
+                allowedDeveloperAppNames: localDevApps,
                 includeSystemReports: includeSys
             )
             if !prevBaseline.isEmpty {

@@ -480,7 +480,8 @@ final class SimulatorPresenter {
 
         // 1. Capture live screen from either Physical iPhone (devicectl) or Booted Simulator (simctl)
         if app.isPhysicalDevice,
-           let devID = router.activePhysicalDevices.first(where: { $0.name == app.deviceName })?.id
+           let devID = app.deviceID
+            ?? router.activePhysicalDevices.first(where: { $0.name == app.deviceName })?.id
             ?? router.selectedPhysicalDeviceID
             ?? router.activePhysicalDevices.first?.id {
             if let out = try? await interactor.capturePhysicalDeviceScreenshot(deviceID: devID, to: screenURL),
