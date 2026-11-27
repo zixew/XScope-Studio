@@ -7,9 +7,15 @@ struct PreferencesPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(AppStrings.Enhancements.preferences)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(CompanionTheme.textPrimary)
+            HStack(spacing: 7) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(CompanionTheme.accent)
+                Text(AppStrings.Enhancements.preferences)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(CompanionTheme.textPrimary)
+                Spacer()
+            }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(AppStrings.Enhancements.telemetryInterval)
@@ -53,9 +59,11 @@ struct PreferencesPopover: View {
                 .frame(maxWidth: .infinity)
             }
 
-            Divider()
+            Rectangle()
+                .fill(CompanionTheme.hairlineBorder)
+                .frame(height: 1)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(AppStrings.Enhancements.bgNotifications)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(CompanionTheme.textSecondary)
@@ -71,8 +79,7 @@ struct PreferencesPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 370)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 330)
         .onChange(of: preferences) { _, newValue in
             onSave(newValue)
         }
