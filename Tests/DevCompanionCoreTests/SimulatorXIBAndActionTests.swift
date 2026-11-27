@@ -93,6 +93,15 @@ struct SimulatorXIBAndActionTests {
         #expect(tree[1].id == "tbl" && tree[1].depth == 1 && tree[1].parentID == "win")
         #expect(tree[2].id == "cell" && tree[2].depth == 2 && tree[2].parentID == "tbl")
         #expect(tree[3].id == "lbl" && tree[3].depth == 3 && tree[3].parentID == "cell")
+
+        // Verify stepped non-colliding planeIndex from back containers to foreground leaf
+        #expect(tree[0].planeIndex < tree[1].planeIndex)
+        #expect(tree[1].planeIndex < tree[2].planeIndex)
+        #expect(tree[2].planeIndex < tree[3].planeIndex)
+
+        // Verify breadcrumb jump bar chain
+        let crumbs = UIHierarchyInspectorService.ancestorBreadcrumb(for: "lbl", in: tree)
+        #expect(crumbs.map(\.id) == ["win", "tbl", "cell", "lbl"])
     }
 
     @Test("ProcessTelemetryService 2-step filter requires target device first and shows only opened user app")

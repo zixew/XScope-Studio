@@ -387,25 +387,63 @@ struct SimulatorControlsView: View {
                                 }
                             }
 
+                            // Xcode Top Breadcrumb Jump Bar (Root ▸ Container ▸ Subview)
+                            if !presenter.breadcrumbNodes.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 4) {
+                                        ForEach(Array(presenter.breadcrumbNodes.enumerated()), id: \.element.id) { idx, crumb in
+                                            if idx > 0 {
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 8, weight: .bold))
+                                                    .foregroundStyle(CompanionTheme.textMuted)
+                                            }
+                                            Button {
+                                                presenter.selectComponent(crumb)
+                                            } label: {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: crumb.kind.iconName)
+                                                        .font(.system(size: 9))
+                                                        .foregroundStyle(crumb.id == presenter.selectedNodeID ? CompanionTheme.accent : CompanionTheme.textSecondary)
+                                                    Text(crumb.name)
+                                                        .font(.system(size: 10, weight: crumb.id == presenter.selectedNodeID ? .bold : .medium))
+                                                        .foregroundStyle(crumb.id == presenter.selectedNodeID ? CompanionTheme.textPrimary : CompanionTheme.textSecondary)
+                                                        .lineLimit(1)
+                                                }
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 5)
+                                                        .fill(crumb.id == presenter.selectedNodeID ? CompanionTheme.accent.opacity(0.22) : Color.white.opacity(0.04))
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                            }
+
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.black.opacity(0.42))
+                                    .fill(Color(red: 0.14, green: 0.15, blue: 0.18).opacity(0.92))
 
                                 if presenter.renderMode == .render2D {
                                     deviceStagePlane(zLayerFilter: nil)
                                         .frame(width: 245, height: 505)
                                         .scaleEffect(presenter.canvasZoom)
                                 } else {
-                                    // Metal GPU SceneKit 120fps 3D Debug View Hierarchy
+                                    // Authentic Xcode 3D Debug View Hierarchy
                                     SceneKit3DHierarchyView(
                                         nodes: presenter.componentNodes,
                                         fullScreenImage: presenter.liveScreenCGImage,
                                         croppedTextures: presenter.preCroppedTextures,
                                         selectedNodeID: presenter.selectedNode?.id,
                                         layerSpacing: presenter.layerSpacing,
-                                        showWireframesOnly: presenter.showWireframesOnly,
+                                        displayMode: presenter.displayMode,
                                         showLabels: showComponentLabels,
                                         zoomScale: presenter.canvasZoom,
+                                        minDepthRatio: presenter.minDepthRatio,
+                                        maxDepthRatio: presenter.maxDepthRatio,
                                         resetTrigger: presenter.cameraResetCounter,
                                         onSelectNode: { node in
                                             presenter.selectComponent(node)
@@ -413,7 +451,61 @@ struct SimulatorControlsView: View {
                                     )
                                 }
                             }
-                            .frame(maxWidth: .infinity, minHeight: 500)
+                            .frame(maxWidth: .infinity, minHeight: 460)
+
+                            // Xcode Bottom View Debugger Canvas Bar (Spacing | Display Mode | Depth Range Clip)
+                            HStack(spacing: 10) {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "square.3.layers.3d.down.right")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(CompanionTheme.textSecondary)
+                                    Slider(value: $presenter.layerSpacing, in: 8...68)
+                                        .frame(width: 85)
+                                        .help("Layer Spacing")
+                                }
+
+                                Spacer()
+
+                                HStack(spacing: 2) {
+                                    ForEach(HierarchyDisplayMode.allCases) { mode in
+                                        let active = presenter.displayMode == mode
+                                        Button {
+                                            presenter.displayMode = mode
+                                            presenter.showWireframesOnly = (mode == .wireframes)
+                                        } label: {
+                                            Text(mode.rawValue)
+                                                .font(.system(size: 9.5, weight: active ? .bold : .medium))
+                                                .foregroundStyle(active ? Color.white : CompanionTheme.textSecondary)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 5)
+                                                        .fill(active ? CompanionTheme.accent : Color.clear)
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(2)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
+
+                                Spacer()
+
+                                HStack(spacing: 5) {
+                                    Text("Clip")
+                                        .font(.system(size: 9.5, weight: .medium))
+                                        .foregroundStyle(CompanionTheme.textMuted)
+                                    Slider(value: $presenter.minDepthRatio, in: 0.0...0.85)
+                                        .frame(width: 60)
+                                        .help("Clip Back Layers")
+                                    Slider(value: $presenter.maxDepthRatio, in: 0.15...1.0)
+                                        .frame(width: 60)
+                                        .help("Clip Front Layers")
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(CompanionTheme.glassLow))
                         }
                     }
 

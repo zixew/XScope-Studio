@@ -112,11 +112,21 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
             case .control: return "slider.horizontal.3"
             }
         }
+
+        public var isStructuralContainer: Bool {
+            switch self {
+            case .window, .cardContainer, .tableView, .collectionView, .scrollView, .stackView, .cell, .navigationBar, .tabBar:
+                return true
+            case .banner, .imageView, .actionGrid, .button, .label, .inputField, .control:
+                return false
+            }
+        }
     }
 
     public let id: String
     public var parentID: String?
     public var depth: Int
+    public var planeIndex: Int
     public var childCount: Int
     public var className: String
     public var name: String
@@ -152,6 +162,7 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
         id: String? = nil,
         parentID: String? = nil,
         depth: Int = 0,
+        planeIndex: Int = 0,
         childCount: Int = 0,
         className: String? = nil,
         name: String,
@@ -184,6 +195,7 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
         self.id = id ?? "\(fileName):\(lineNumber):\(name)"
         self.parentID = parentID
         self.depth = depth
+        self.planeIndex = planeIndex
         self.childCount = childCount
         self.className = className ?? kind.rawValue
         self.name = name
@@ -234,7 +246,7 @@ public struct UIHierarchyInspectorService: Sendable {
 
         var result: [String: CGImage] = [:]
         result.reserveCapacity(nodes.count)
-        for node in nodes where node.kind != .window {
+        for node in nodes where !node.kind.isStructuralContainer {
             let cropRect = CGRect(
                 x: max(0, CGFloat(node.normalizedX) * imgW),
                 y: max(0, CGFloat(node.normalizedY) * imgH),
@@ -558,7 +570,39 @@ public struct UIHierarchyInspectorService: Sendable {
         for i in nodes.indices where !visited.contains(nodes[i].id) {
             dfs(i, depth: 1)
         }
+
+        // Assign distinct stepped 3D plane indices:
+        // Structural containers (UIWindow, ViewController, UITableView, UIStackView, etc.) each step along their own backing planes (0..C-1),
+        // and foreground leaf elements step across planes C..N by depth so nothing clumps or z-fights.
+        var nextContainerPlane = 0
+        for i in ordered.indices where ordered[i].kind.isStructuralContainer {
+            ordered[i].planeIndex = nextContainerPlane
+            nextContainerPlane += 1
+        }
+        let baseLeafPlane = max(1, nextContainerPlane)
+        var leafCounter = 0
+        for i in ordered.indices where !ordered[i].kind.isStructuralContainer {
+            ordered[i].planeIndex = baseLeafPlane + ordered[i].depth + (leafCounter / 3)
+            leafCounter += 1
+        }
         return ordered
+    }
+
+    public static func ancestorBreadcrumb(for nodeID: String?, in nodes: [UIComponentNode]) -> [UIComponentNode] {
+        guard let nodeID, !nodes.isEmpty else { return [] }
+        let byID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+        var chain: [UIComponentNode] = []
+        var visited: Set<String> = []
+        var cursor = byID[nodeID]
+        while let current = cursor, visited.insert(current.id).inserted {
+            chain.append(current)
+            if let pid = current.parentID {
+                cursor = byID[pid]
+            } else {
+                cursor = nil
+            }
+        }
+        return chain.reversed()
     }
 
     private struct ScreenSourceMatch {

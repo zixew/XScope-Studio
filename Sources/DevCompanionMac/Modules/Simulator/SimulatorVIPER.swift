@@ -174,6 +174,9 @@ final class SimulatorPresenter {
     var layerSpacing: Double = 32
     var canvasZoom: Double = 1.0
     var showWireframesOnly: Bool = false
+    var displayMode: HierarchyDisplayMode = .wireframesAndContents
+    var minDepthRatio: Double = 0.0
+    var maxDepthRatio: Double = 1.0
     var lastComponentRevertRecord: PatchRevertRecord?
 
     var deepLinkURL = ""
@@ -494,7 +497,14 @@ final class SimulatorPresenter {
         layerSpacing = 32
         canvasZoom = 1.0
         showWireframesOnly = false
+        displayMode = .wireframesAndContents
+        minDepthRatio = 0.0
+        maxDepthRatio = 1.0
         cameraResetCounter += 1
+    }
+
+    var breadcrumbNodes: [UIComponentNode] {
+        UIHierarchyInspectorService.ancestorBreadcrumb(for: selectedNodeID, in: componentNodes)
     }
 
     var hasUnappliedChanges: Bool {

@@ -3,17 +3,29 @@ import SceneKit
 import AppKit
 import DevCompanionCore
 
-/// Metal GPU-accelerated 120fps 3D Debug View Hierarchy powered by SceneKit (`SCNView`).
-/// Orbit rotation & zoom run directly on the SceneKit GPU graph with zero SwiftUI main-thread re-renders.
+public enum HierarchyDisplayMode: String, CaseIterable, Sendable, Identifiable {
+    case wireframes = "Wireframes"
+    case wireframesAndContents = "Both"
+    case contents = "Contents"
+
+    public var id: String { rawValue }
+}
+
+/// Metal GPU-accelerated 120fps 3D Debug View Hierarchy modeled after Xcode's View Debugger:
+/// - Stepped structural container backing planes (matte light/slate cards + dark Top Header Tab with C/V icon) — never duplicating full-screen screenshot pixels.
+/// - Intermediate wireframe subview layout grid planes.
+/// - Isolated foreground leaf visual elements rendering their cropped pixel content + Xcode sky-blue selection outline.
 struct SceneKit3DHierarchyView: NSViewRepresentable {
     let nodes: [UIComponentNode]
     let fullScreenImage: CGImage?
     let croppedTextures: [String: CGImage]
     let selectedNodeID: String?
     let layerSpacing: Double
-    let showWireframesOnly: Bool
+    let displayMode: HierarchyDisplayMode
     let showLabels: Bool
     let zoomScale: Double
+    let minDepthRatio: Double
+    let maxDepthRatio: Double
     let resetTrigger: Int
     let onSelectNode: (UIComponentNode) -> Void
 
@@ -32,24 +44,22 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
         let scene = SCNScene()
         scnView.scene = scene
 
-        // Camera
         let cameraNode = SCNNode()
         cameraNode.camera = SCNCamera()
-        cameraNode.camera?.fieldOfView = 38
+        cameraNode.camera?.fieldOfView = 36
         cameraNode.camera?.zNear = 0.1
-        cameraNode.camera?.zFar = 100
-        cameraNode.position = SCNVector3(0, 0, 11.5)
+        cameraNode.camera?.zFar = 120
+        cameraNode.position = SCNVector3(0, 0, 12.5)
         scene.rootNode.addChildNode(cameraNode)
         context.coordinator.cameraNode = cameraNode
 
-        // Pivot node holding all 3D layers
         let pivot = SCNNode()
-        pivot.eulerAngles = SCNVector3(Float(0.10), Float(-0.46), 0)
+        // Signature Xcode View Debugger angled isometric-perspective stance
+        pivot.eulerAngles = SCNVector3(CGFloat(0.08), CGFloat(-0.52), 0)
         scene.rootNode.addChildNode(pivot)
         context.coordinator.pivotNode = pivot
         context.coordinator.scnView = scnView
 
-        // Native AppKit gestures (120fps GPU orbit without triggering SwiftUI body rebuilds)
         let pan = NSPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePan(_:)))
         scnView.addGestureRecognizer(pan)
 
@@ -71,13 +81,13 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             coordinator.lastResetTrigger = resetTrigger
             SCNTransaction.begin()
             SCNTransaction.animationDuration = 0.25
-            coordinator.pivotNode?.eulerAngles = SCNVector3(CGFloat(0.10), CGFloat(-0.46), 0)
-            let resetZ = CGFloat(11.5) / max(0.5, CGFloat(zoomScale))
+            coordinator.pivotNode?.eulerAngles = SCNVector3(CGFloat(0.08), CGFloat(-0.52), 0)
+            let resetZ = CGFloat(12.5) / max(0.5, CGFloat(zoomScale))
             coordinator.cameraNode?.position = SCNVector3(0, 0, resetZ)
             SCNTransaction.commit()
         } else {
-            let targetZ = CGFloat(11.5) / max(0.5, CGFloat(zoomScale))
-            let currentZ = coordinator.cameraNode?.position.z ?? CGFloat(11.5)
+            let targetZ = CGFloat(12.5) / max(0.5, CGFloat(zoomScale))
+            let currentZ = coordinator.cameraNode?.position.z ?? CGFloat(12.5)
             if abs(currentZ - targetZ) > 0.05 {
                 coordinator.cameraNode?.position = SCNVector3(0, 0, targetZ)
             }
@@ -85,17 +95,21 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
 
         let needsRebuild = coordinator.lastNodes != nodes
             || coordinator.lastImagePtr != fullScreenImage.map { Unmanaged.passUnretained($0).toOpaque() }
-            || coordinator.lastShowWireframe != showWireframesOnly
+            || coordinator.lastDisplayMode != displayMode
             || coordinator.lastShowLabels != showLabels
-            || abs(coordinator.lastLayerSpacing - layerSpacing) > 0.5
+            || abs(coordinator.lastLayerSpacing - layerSpacing) > 0.4
+            || abs(coordinator.lastMinDepth - minDepthRatio) > 0.01
+            || abs(coordinator.lastMaxDepth - maxDepthRatio) > 0.01
             || coordinator.lastSelectedID != selectedNodeID
 
         if needsRebuild {
             coordinator.lastNodes = nodes
             coordinator.lastImagePtr = fullScreenImage.map { Unmanaged.passUnretained($0).toOpaque() }
-            coordinator.lastShowWireframe = showWireframesOnly
+            coordinator.lastDisplayMode = displayMode
             coordinator.lastShowLabels = showLabels
             coordinator.lastLayerSpacing = layerSpacing
+            coordinator.lastMinDepth = minDepthRatio
+            coordinator.lastMaxDepth = maxDepthRatio
             coordinator.lastSelectedID = selectedNodeID
             coordinator.rebuildHierarchyPlanes(
                 nodes: nodes,
@@ -103,8 +117,10 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 croppedTextures: croppedTextures,
                 selectedID: selectedNodeID,
                 layerSpacing: layerSpacing,
-                wireframe: showWireframesOnly,
-                showLabels: showLabels
+                displayMode: displayMode,
+                showLabels: showLabels,
+                minDepthRatio: minDepthRatio,
+                maxDepthRatio: maxDepthRatio
             )
         }
     }
@@ -119,14 +135,16 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
         var nodesByID: [String: UIComponentNode] = [:]
         var lastNodes: [UIComponentNode] = []
         var lastImagePtr: UnsafeMutableRawPointer?
-        var lastShowWireframe = false
-        var lastShowLabels = false
+        var lastDisplayMode: HierarchyDisplayMode = .wireframesAndContents
+        var lastShowLabels = true
         var lastLayerSpacing: Double = 32
+        var lastMinDepth: Double = 0.0
+        var lastMaxDepth: Double = 1.0
         var lastSelectedID: String?
         var lastResetTrigger = 0
 
         private var panStartEuler: SCNVector3 = SCNVector3Zero
-        private var pinchStartZ: CGFloat = 11.5
+        private var pinchStartZ: CGFloat = 12.5
 
         init(onSelectNode: @escaping (UIComponentNode) -> Void) {
             self.onSelectNode = onSelectNode
@@ -140,7 +158,7 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             }
             let rawYaw = panStartEuler.y + t.x * 0.009
             let rawPitch = panStartEuler.x - t.y * 0.008
-            let yaw = max(CGFloat(-1.35), min(CGFloat(1.35), rawYaw))
+            let yaw = max(CGFloat(-1.42), min(CGFloat(1.42), rawYaw))
             let pitch = max(CGFloat(-0.85), min(CGFloat(0.85), rawPitch))
             pivot.eulerAngles = SCNVector3(pitch, yaw, 0)
         }
@@ -151,7 +169,7 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 pinchStartZ = cam.position.z
             }
             let scale = max(CGFloat(0.4), 1.0 + gesture.magnification)
-            let newZ = max(CGFloat(5.5), min(CGFloat(20.0), pinchStartZ / scale))
+            let newZ = max(CGFloat(5.0), min(CGFloat(22.0), pinchStartZ / scale))
             cam.position = SCNVector3(0, 0, newZ)
         }
 
@@ -177,81 +195,168 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             croppedTextures: [String: CGImage],
             selectedID: String?,
             layerSpacing: Double,
-            wireframe: Bool,
-            showLabels: Bool
+            displayMode: HierarchyDisplayMode,
+            showLabels: Bool,
+            minDepthRatio: Double,
+            maxDepthRatio: Double
         ) {
             guard let pivot = pivotNode else { return }
             pivot.childNodes.forEach { $0.removeFromParentNode() }
 
+            let visible = nodes.filter { !$0.isHidden }
+            guard !visible.isEmpty else { return }
+
+            let maxPlane = max(1, visible.map(\.planeIndex).max() ?? 1)
+            let minAllowedPlane = Int((Double(maxPlane) * min(minDepthRatio, maxDepthRatio)).rounded(.down))
+            let maxAllowedPlane = Int((Double(maxPlane) * max(minDepthRatio, maxDepthRatio)).rounded(.up))
+
             let stageW: CGFloat = 2.95
-            let stageH: CGFloat = 6.20
-            let zStep = Float(layerSpacing) * 0.022
+            let stageH: CGFloat = 6.15
+            let zStep = CGFloat(layerSpacing) * 0.011
+            let midPlane = CGFloat(maxPlane) * 0.5
 
-            // Subtle glass guide planes for Z1..Z3
-            for z in 1...3 {
-                let zPos = (Float(z) - 1.5) * zStep
-                let guide = SCNPlane(width: stageW, height: stageH)
-                guide.cornerRadius = 0.22
-                let mat = SCNMaterial()
-                mat.diffuse.contents = NSColor.white.withAlphaComponent(0.025)
-                mat.isDoubleSided = true
-                guide.materials = [mat]
-                let guideNode = SCNNode(geometry: guide)
-                guideNode.position = SCNVector3(0, 0, zPos - 0.01)
-                pivot.addChildNode(guideNode)
-            }
+            let showContents = (displayMode != .wireframes)
+            let showWireframes = (displayMode != .contents)
 
-            for node in nodes where !node.isHidden {
-                let zPos = (Float(node.zLayer) - 1.5) * zStep
-                let isSelected = node.id == selectedID
+            var containerOrder = 0
 
-                let w = max(0.18, CGFloat(node.normalizedWidth) * stageW)
+            for node in visible {
+                guard node.planeIndex >= minAllowedPlane && node.planeIndex <= maxAllowedPlane else {
+                    continue
+                }
+                let isSelected = (node.id == selectedID)
+                let zPos = (CGFloat(node.planeIndex) - midPlane) * zStep
+
+                let w = max(0.20, CGFloat(node.normalizedWidth) * stageW)
                 let h = max(0.14, CGFloat(node.normalizedHeight) * stageH)
                 let cx = (CGFloat(node.normalizedX) + CGFloat(node.normalizedWidth) * 0.5 - 0.5) * stageW
                 let cy = (0.5 - (CGFloat(node.normalizedY) + CGFloat(node.normalizedHeight) * 0.5)) * stageH
 
+                let isContainer = node.kind.isStructuralContainer
                 let plane = SCNPlane(width: w, height: h)
-                plane.cornerRadius = node.kind == .window ? 0.22 : min(0.12, CGFloat(node.cornerRadius) * 0.008)
+                plane.cornerRadius = node.kind == .window ? 0.22 : (isContainer ? 0.16 : min(0.10, CGFloat(node.cornerRadius) * 0.007))
 
                 let mat = SCNMaterial()
                 mat.isDoubleSided = true
                 mat.lightingModel = .constant
 
-                if node.kind == .window {
-                    if !wireframe, let fullImage {
-                        mat.diffuse.contents = fullImage
-                        mat.transparency = 0.96
+                if isContainer {
+                    // Xcode-style stepped matte backing card for structural containers (NEVER duplicating child screenshot pixels!)
+                    if showContents {
+                        let shade = max(0.72, 0.95 - Double(containerOrder) * 0.055)
+                        mat.diffuse.contents = NSColor(srgbRed: shade, green: shade + 0.01, blue: min(1.0, shade + 0.03), alpha: 0.94)
                     } else {
-                        mat.diffuse.contents = NSColor(red: 0.07, green: 0.09, blue: 0.14, alpha: 0.85)
+                        mat.diffuse.contents = NSColor.white.withAlphaComponent(0.03)
                     }
+                    containerOrder += 1
                 } else if node.isEdited {
                     mat.diffuse.contents = Self.renderEditedTexture(node: node, size: CGSize(width: max(140, w * 90), height: max(48, h * 90)))
                     mat.transparency = CGFloat(node.opacity)
-                } else if !wireframe, let tex = croppedTextures[node.id] {
+                } else if showContents, let tex = croppedTextures[node.id] {
                     mat.diffuse.contents = tex
                     mat.transparency = CGFloat(node.opacity)
-                } else {
+                } else if showContents {
                     let accent = Self.nsColor(hex: node.accentHex)
-                    mat.diffuse.contents = accent.withAlphaComponent(wireframe ? 0.10 : (isSelected ? 0.38 : 0.20))
+                    mat.diffuse.contents = accent.withAlphaComponent(isSelected ? 0.35 : 0.16)
+                } else {
+                    mat.diffuse.contents = NSColor.white.withAlphaComponent(0.02)
                 }
 
                 plane.materials = [mat]
                 let scnNode = SCNNode(geometry: plane)
                 scnNode.name = node.id
-                scnNode.position = SCNVector3(Float(cx), Float(cy), zPos + (isSelected ? 0.03 : 0.0))
+                scnNode.position = SCNVector3(cx, cy, zPos + (isSelected ? 0.02 : 0.0))
 
-                // Crisp border frame on selected or wireframe/labeled components
-                if isSelected || wireframe || showLabels || node.kind == .window {
+                // Wireframe outline / Xcode sky-blue selection highlight
+                if isSelected || showWireframes || isContainer {
+                    let xcodeBlue = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 1.0)
                     let borderColor: NSColor = isSelected
-                        ? .white
-                        : Self.nsColor(hex: node.accentHex).withAlphaComponent(node.kind == .window ? 0.35 : 0.65)
-                    let borderNode = Self.makeBorderNode(width: w, height: h, color: borderColor, thickness: isSelected ? 0.028 : 0.012)
-                    borderNode.position = SCNVector3(0, 0, 0.006)
+                        ? xcodeBlue
+                        : (isContainer
+                            ? NSColor(srgbRed: 0.55, green: 0.62, blue: 0.72, alpha: 0.65)
+                            : NSColor(srgbRed: 0.64, green: 0.72, blue: 0.82, alpha: 0.52))
+                    let thickness: CGFloat = isSelected ? 0.028 : (isContainer ? 0.011 : 0.008)
+                    let borderNode = Self.makeBorderNode(width: w, height: h, color: borderColor, thickness: thickness)
+                    borderNode.position = SCNVector3(0, 0, 0.004)
                     scnNode.addChildNode(borderNode)
+                }
+
+                // Xcode Top Header Tab Banner above structural containers (UIWindow, ViewController, UITableView, UIStackView, etc.)
+                if (showLabels || isContainer) && (isContainer || isSelected) {
+                    let tabH: CGFloat = 0.21
+                    let tabW: CGFloat = min(w, max(1.35, CGFloat(node.name.count) * 0.072 + 0.45))
+                    let tabPlane = SCNPlane(width: tabW, height: tabH)
+                    tabPlane.cornerRadius = 0.04
+                    let tabMat = SCNMaterial()
+                    tabMat.lightingModel = .constant
+                    tabMat.isDoubleSided = true
+                    tabMat.diffuse.contents = Self.renderHeaderTabTexture(
+                        title: isContainer ? "\(node.className) — \(node.name)" : node.name,
+                        isController: node.kind == .window || node.kind == .cardContainer || node.kind == .navigationBar,
+                        isSelected: isSelected,
+                        size: CGSize(width: 340, height: 38)
+                    )
+                    tabPlane.materials = [tabMat]
+                    let tabNode = SCNNode(geometry: tabPlane)
+                    tabNode.name = node.id
+                    tabNode.position = SCNVector3(-w * 0.5 + tabW * 0.5, h * 0.5 + tabH * 0.52, 0.005)
+                    scnNode.addChildNode(tabNode)
                 }
 
                 pivot.addChildNode(scnNode)
             }
+        }
+
+        private static func renderHeaderTabTexture(
+            title: String,
+            isController: Bool,
+            isSelected: Bool,
+            size: CGSize
+        ) -> NSImage {
+            let img = NSImage(size: size)
+            img.lockFocus()
+            let rect = NSRect(origin: .zero, size: size)
+            let bg = isSelected
+                ? NSColor(srgbRed: 0.06, green: 0.36, blue: 0.78, alpha: 0.96)
+                : NSColor(srgbRed: 0.14, green: 0.16, blue: 0.20, alpha: 0.95)
+            let path = NSBezierPath(roundedRect: rect, xRadius: 7, yRadius: 7)
+            bg.setFill()
+            path.fill()
+
+            // Left badge circle (Xcode yellow 'C' for controller/window, sky-blue 'V' for view/container)
+            let badgeRect = NSRect(x: 10, y: (size.height - 20) * 0.5, width: 20, height: 20)
+            let badgeColor = isController
+                ? NSColor(srgbRed: 0.96, green: 0.72, blue: 0.18, alpha: 1.0)
+                : NSColor(srgbRed: 0.22, green: 0.74, blue: 0.97, alpha: 1.0)
+            badgeColor.setFill()
+            NSBezierPath(ovalIn: badgeRect).fill()
+
+            let badgeChar: NSString = isController ? "C" : "V"
+            let badgeAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.boldSystemFont(ofSize: 11),
+                .foregroundColor: NSColor.black
+            ]
+            let bSize = badgeChar.size(withAttributes: badgeAttrs)
+            badgeChar.draw(
+                at: NSPoint(x: badgeRect.midX - bSize.width * 0.5, y: badgeRect.midY - bSize.height * 0.5),
+                withAttributes: badgeAttrs
+            )
+
+            let textAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
+                .foregroundColor: NSColor.white
+            ]
+            let nsTitle = title as NSString
+            let tSize = nsTitle.size(withAttributes: textAttrs)
+            let textRect = NSRect(
+                x: 36,
+                y: (size.height - tSize.height) * 0.5,
+                width: size.width - 44,
+                height: tSize.height + 2
+            )
+            nsTitle.draw(in: textRect, withAttributes: textAttrs)
+            img.unlockFocus()
+            return img
         }
 
         private static func makeBorderNode(width: CGFloat, height: CGFloat, color: NSColor, thickness: CGFloat) -> SCNNode {
@@ -264,22 +369,22 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             let top = SCNPlane(width: width, height: thickness)
             top.materials = [mat]
             let topN = SCNNode(geometry: top)
-            topN.position = SCNVector3(0, Float(height * 0.5), 0)
+            topN.position = SCNVector3(0, height * 0.5, 0)
 
             let bot = SCNPlane(width: width, height: thickness)
             bot.materials = [mat]
             let botN = SCNNode(geometry: bot)
-            botN.position = SCNVector3(0, Float(-height * 0.5), 0)
+            botN.position = SCNVector3(0, -height * 0.5, 0)
 
             let left = SCNPlane(width: thickness, height: height)
             left.materials = [mat]
             let leftN = SCNNode(geometry: left)
-            leftN.position = SCNVector3(Float(-width * 0.5), 0, 0)
+            leftN.position = SCNVector3(-width * 0.5, 0, 0)
 
             let right = SCNPlane(width: thickness, height: height)
             right.materials = [mat]
             let rightN = SCNNode(geometry: right)
-            rightN.position = SCNVector3(Float(width * 0.5), 0, 0)
+            rightN.position = SCNVector3(width * 0.5, 0, 0)
 
             parent.addChildNode(topN)
             parent.addChildNode(botN)
