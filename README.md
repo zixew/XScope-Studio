@@ -1,8 +1,6 @@
 # XScope Studio
 
-[![macOS CI](https://github.com/zixew/XScope-Studio/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/zixew/XScope-Studio/actions/workflows/macos-ci.yml)
-
-Native macOS developer companion for Xcode & iOS engineering — inspect Simulators in 2D/3D, diagnose Crashlytics & hangs, run static Swift/UIKit/SwiftUI code reviews, and monitor unit tests in one workspace.
+A macOS companion app for iOS app teams and developers to inspect live Simulators, diagnose crashes and freezes, review code quality, and manage daily workflows in one place.
 
 ![XScope Studio Hero Preview](docs/assets/hero-preview.png)
 
@@ -18,41 +16,18 @@ Native macOS developer companion for Xcode & iOS engineering — inspect Simulat
 
 ## Features
 
-- **Overview**: Real-time workspace snapshot, active Simulator & physical iPhone status, and quick diagnostics.
-- **Crashlytics**: Parse `.ips` / crash reports, highlight culprit frames, and jump straight to source lines in Xcode (`xed`).
-- **Leaks & Hangs**: Static & live freeze timeline, retain cycle (`[weak self]`) call-tree detection, and memory/CPU telemetry.
-- **Code Review**: Fast local Swift, UIKit, and SwiftUI analyzer across Pull Request diffs, specific modules/folders, or the full project.
-- **Simulator 2D / 3D Live UI Inspector**: Interactive 2D canvas and 3D exploded layer hierarchy with depth/zoom/wireframe controls, live sync, appearance toggles, and console/deep-link utilities.
-- **Unit Tests & Utilities**: Run XCTest / Swift Testing targets, inspect results, and scan localization (`L10n`) keys.
-- **Quick Jump (`⌘K`)**: Instant file, symbol, and module search with line-level jump to Xcode.
-- **Theme & Custom Background**: Glassmorphic dark workspace with customizable wallpaper and English / Bahasa Indonesia (`EN` / `ID`) localization.
+### Monitor & Diagnose
+- **Overview**: Live workspace summary showing active Simulators, connected iPhones, and recent diagnostic health at a glance.
+- **Crashlytics**: Open crash reports, pinpoint the exact screen or line responsible for a force-close, and jump straight to the source file in Xcode.
+- **Leaks & Hangs**: Track main-thread freezes on a visual timeline, spot potential memory leaks and retain cycles, and inspect suggested fixes.
+- **Code Review**: Scan Pull Request changes, specific folders, or the entire project for common bugs, UI responsiveness issues, and code hygiene.
 
-## Architecture
+### Build & Tools
+- **Simulator 2D / 3D Live UI Inspector**: View any running Simulator app in a 2D canvas or an interactive 3D exploded layer hierarchy with zoom, depth, labels, wireframe mode, and quick appearance toggles (Dark / Light / Status Bar).
+- **Unit Tests**: Run and inspect test suites for your project targets and review pass/fail status without switching windows.
+- **Utilities**: Manage quick developer helpers, localization checks, and color/asset utilities in one sidebar.
 
-Built with Swift 6 (`swift-tools-version: 6.0`) and SwiftPM:
-
-- `DevCompanionCore` — Pure Swift diagnostic engines, static analyzers, crash parsers, and project scanners.
-- `DevCompanionMac` — Native macOS SwiftUI + AppKit desktop app structured with VIPER modules.
-- `DevCompanionCoreTests` — Unit test suite covering core analyzers and parsers.
-
-## Requirements
-
-- macOS 14.0+
-- Swift 6.0+
-- Xcode (for `simctl`, `xed`, and iOS Simulator tooling)
-
-## Build & Test
-
-```bash
-# Build
-swift build
-
-# Run unit tests
-swift test
-
-# Run the desktop app
-swift run DevCompanionMac
-
-# Package macOS .app bundle
-./scripts/build_app.sh
-```
+### Workspace Experience
+- **Quick Jump (`⌘K`)**: Search files, modules, and screens instantly and open them directly at the right line.
+- **Theme & Custom Background**: Personalize the workspace with translucent dark glass panels and your own custom background image.
+- **Bilingual Interface (`EN` / `ID`)**: Switch cleanly between English and Bahasa Indonesia anytime.
