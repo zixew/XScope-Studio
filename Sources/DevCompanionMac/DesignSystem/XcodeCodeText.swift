@@ -17,15 +17,16 @@ private enum XcodeCodeHighlightCache {
     }()
 }
 
-/// Renders Swift source code using Xcode Default (Dark or Light) syntax highlighting colors with bounded caching.
+/// Renders Swift source code using a calm, eye-friendly syntax palette with bounded caching.
 struct XcodeCodeText: View {
     @Environment(\.colorScheme) private var colorScheme
     let code: String
-    var fontSize: CGFloat = 11
+    var fontSize: CGFloat = 12
 
     var body: some View {
         Text(attributedCode)
             .font(.system(size: fontSize, design: .monospaced))
+            .lineSpacing(3.5)
             .textSelection(.enabled)
     }
 
@@ -59,13 +60,43 @@ struct XcodeCodeText: View {
             }
         } else {
             switch kind {
-            case .keyword, .attribute: Color(red: 0.988, green: 0.373, blue: 0.639) // #FC5FA3
-            case .string:              Color(red: 0.988, green: 0.416, blue: 0.365) // #FC6A5D
-            case .comment:             Color(red: 0.424, green: 0.475, blue: 0.525) // #6C7986
-            case .number:              Color(red: 0.816, green: 0.749, blue: 0.412) // #D0BF69
-            case .type:                Color(red: 0.365, green: 0.847, blue: 1.000) // #5DD8FF
-            case .plain:               Color(red: 0.875, green: 0.875, blue: 0.878) // #DFDFE0
+            case .keyword, .attribute: Color(red: 0.957, green: 0.447, blue: 0.714) // #F472B6 (Calm Rose)
+            case .string:              Color(red: 0.992, green: 0.643, blue: 0.686) // #FDA4AF (Warm Peach)
+            case .comment:             Color(red: 0.545, green: 0.580, blue: 0.620) // #8B949E (Muted Slate)
+            case .number:              Color(red: 0.910, green: 0.808, blue: 0.514) // #E8CE83 (Soft Sand)
+            case .type:                Color(red: 0.490, green: 0.827, blue: 0.988) // #7DD3FC (Soft Sky)
+            case .plain:               Color(red: 0.902, green: 0.929, blue: 0.953) // #E6EDF3 (Soft Off-White)
             }
         }
+    }
+}
+
+/// High-opacity calm code container that blocks busy background wallpapers from bleeding through code text.
+struct CodeSurfaceContainer<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var padding: CGFloat = 12
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        content()
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        colorScheme == .light
+                            ? Color(white: 0.98).opacity(0.94)
+                            : Color(red: 0.055, green: 0.075, blue: 0.115).opacity(0.90)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(
+                        colorScheme == .light
+                            ? Color.black.opacity(0.08)
+                            : Color.white.opacity(0.09),
+                        lineWidth: 1
+                    )
+            )
     }
 }

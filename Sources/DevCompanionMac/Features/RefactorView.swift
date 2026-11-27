@@ -245,12 +245,12 @@ struct RefactorView: View {
                                     }
                                     .buttonStyle(.borderedProminent)
                                 }
-                                Text("- \(old)\n+ \(new)")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(CompanionTheme.textPrimary)
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35)))
+                                CodeSurfaceContainer(padding: 10) {
+                                    Text("- \(old)\n+ \(new)")
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .lineSpacing(3)
+                                        .foregroundStyle(CompanionTheme.textPrimary)
+                                }
                             }
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 10).fill(CompanionTheme.mint.opacity(0.08)))
@@ -286,13 +286,13 @@ struct RefactorView: View {
                                 .padding(.vertical, 6)
                                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.05)))
 
-                            Text(bundle.prompt)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(CompanionTheme.textSecondary)
-                                .textSelection(.enabled)
-                                .padding(10)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35)))
+                            CodeSurfaceContainer(padding: 10) {
+                                Text(bundle.prompt)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .lineSpacing(3)
+                                    .foregroundStyle(CompanionTheme.textSecondary)
+                                    .textSelection(.enabled)
+                            }
                         }
                     }
                     .padding(4)

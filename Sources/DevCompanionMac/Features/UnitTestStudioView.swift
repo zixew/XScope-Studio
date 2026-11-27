@@ -97,13 +97,34 @@ struct UnitTestStudioView: View {
                                     .preventSquish()
                                 }
 
-                                TextField(AppStrings.UnitTest.moduleNamePlaceholder, text: $presenter.testModuleName)
-                                    .textFieldStyle(.roundedBorder)
+                                HStack(spacing: 8) {
+                                    Text("Module:")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(CompanionTheme.textMuted)
+                                    TextField(AppStrings.UnitTest.moduleNamePlaceholder, text: $presenter.testModuleName)
+                                        .textFieldStyle(.plain)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(CompanionTheme.textPrimary)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(CompanionTheme.glassLow)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(CompanionTheme.hairlineBorder, lineWidth: 1)
+                                )
 
-                                TextEditor(text: $presenter.testSourceCode)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .scrollContentBackground(.hidden)
-                                    .frame(minHeight: 160)
+                                CodeSurfaceContainer(padding: 8) {
+                                    TextEditor(text: $presenter.testSourceCode)
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .lineSpacing(3.5)
+                                        .foregroundStyle(CompanionTheme.textPrimary)
+                                        .scrollContentBackground(.hidden)
+                                        .frame(minHeight: 240)
+                                }
 
                                 FlowLayout(spacing: 8) {
                                     Button(AppStrings.UnitTest.buildPlan) {
@@ -212,23 +233,47 @@ struct UnitTestStudioView: View {
                     }
 
                     GlassCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(AppStrings.UnitTest.previewTitle)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(CompanionTheme.textPrimary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                Text(AppStrings.UnitTest.previewTitle)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(CompanionTheme.textPrimary)
 
-                            ScrollView {
-                                if presenter.generatedTestCode.isEmpty {
-                                    Text(AppStrings.UnitTest.previewEmpty)
-                                        .font(.system(size: 11, design: .monospaced))
+                                if !presenter.generatedTestCode.isEmpty {
+                                    let lineCount = presenter.generatedTestCode.components(separatedBy: .newlines).count
+                                    Text("\(lineCount) lines")
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 2)
+                                        .background(CompanionTheme.glassLow)
                                         .foregroundStyle(CompanionTheme.textSecondary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                } else {
-                                    XcodeCodeText(code: presenter.generatedTestCode, fontSize: 11)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .clipShape(Capsule())
                                 }
+
+                                Spacer()
+
+                                Button(AppStrings.Common.copyCode) {
+                                    presenter.copyGeneratedCode()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .disabled(presenter.generatedTestCode.isEmpty)
                             }
-                            .frame(minHeight: 330)
+
+                            CodeSurfaceContainer(padding: 12) {
+                                ScrollView {
+                                    if presenter.generatedTestCode.isEmpty {
+                                        Text(AppStrings.UnitTest.previewEmpty)
+                                            .font(.system(size: 12, design: .monospaced))
+                                            .foregroundStyle(CompanionTheme.textSecondary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    } else {
+                                        XcodeCodeText(code: presenter.generatedTestCode, fontSize: 12)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                                .frame(minHeight: 360)
+                            }
                         }
                     }
                 }
