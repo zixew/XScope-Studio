@@ -226,6 +226,13 @@ final class PerformancePresenter {
     var selectedPriority: IssuePriorityFilter = .all {
         didSet {
             visibleLeakLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredFindings()
+        }
+    }
+    var timeRangeFilter: TimeRangeFilter = .allTime {
+        didSet {
+            visibleLeakLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredFindings()
         }
     }
     var visibleLeakLimit: Int = ProgressiveListChunker.defaultPageSize
@@ -295,11 +302,32 @@ final class PerformancePresenter {
     }
 
     var filteredLeakAndHangFindings: [CodeReviewFinding] {
-        switch selectedPriority {
-        case .all: return leakAndHangFindings
-        case .critical: return leakAndHangFindings.filter { $0.severity == .critical }
-        case .warning: return leakAndHangFindings.filter { $0.severity == .warning }
-        case .suggestion: return leakAndHangFindings.filter { $0.severity == .suggestion }
+        let byPriority: [CodeReviewFinding] = switch selectedPriority {
+        case .all: leakAndHangFindings
+        case .critical: leakAndHangFindings.filter { $0.severity == .critical }
+        case .warning: leakAndHangFindings.filter { $0.severity == .warning }
+        case .suggestion: leakAndHangFindings.filter { $0.severity == .suggestion }
+        }
+        return byPriority.filter { timeRangeFilter.matches(date: $0.detectedAt) }
+    }
+
+    var filteredFreezeEvents: [FreezeLagEvent] {
+        capturedFreezeEvents.filter { timeRangeFilter.matches(date: $0.startedAt) }
+    }
+
+    var filteredDiagnosticReports: [DiagnosticReportItem] {
+        diagnosticReports.filter { timeRangeFilter.matches(date: $0.timestamp) }
+    }
+
+    func syncSelectionWithFilteredFindings() {
+        let current = filteredLeakAndHangFindings
+        if current.isEmpty {
+            selectedFindingID = nil
+            activeFixProposal = nil
+        } else if let selID = selectedFindingID, current.contains(where: { $0.id == selID }) {
+            // keep current selection
+        } else if let first = current.first {
+            Task { await selectFinding(first) }
         }
     }
 

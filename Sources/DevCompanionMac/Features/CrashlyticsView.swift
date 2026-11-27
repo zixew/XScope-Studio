@@ -168,6 +168,25 @@ struct CrashlyticsView: View {
                             .preventSquish()
                         }
 
+                        Divider().frame(height: 16)
+
+                        ForEach(TimeRangeFilter.allCases) { tFilter in
+                            let active = presenter.timeRangeFilter == tFilter
+                            Button("\(tFilter.rawValue) (\(presenter.timeRangeCount(for: tFilter)))") {
+                                withAnimation(.snappy) {
+                                    presenter.timeRangeFilter = tFilter
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: active ? .bold : .medium))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(active ? CompanionTheme.accent.opacity(0.25) : CompanionTheme.glassLow)
+                            .foregroundStyle(active ? CompanionTheme.accent : CompanionTheme.textSecondary)
+                            .clipShape(Capsule())
+                            .preventSquish()
+                        }
+
                         HStack(spacing: 6) {
                             Image(systemName: AppConstants.Icons.magnifyingGlass)
                                 .font(.system(size: 11))
@@ -243,10 +262,15 @@ struct CrashlyticsView: View {
 
                                                 Spacer()
 
-                                                Text(report.timestamp, style: .relative)
-                                                    .font(.system(size: 9))
-                                                    .foregroundStyle(CompanionTheme.textMuted)
-                                                    .preventSquish()
+                                                VStack(alignment: .trailing, spacing: 2) {
+                                                    Text(report.formattedDateString)
+                                                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                                                        .foregroundStyle(CompanionTheme.textSecondary)
+                                                    Text(report.timestamp, style: .relative)
+                                                        .font(.system(size: 8.5))
+                                                        .foregroundStyle(CompanionTheme.textMuted)
+                                                }
+                                                .preventSquish()
                                             }
 
                                             Text(report.humanTitle)
@@ -456,10 +480,20 @@ struct CrashlyticsView: View {
                                 }
                             }
                         } else {
-                            Text(AppStrings.Crashlytics.selectEventPrompt)
-                                .font(.system(size: 12))
-                                .foregroundStyle(CompanionTheme.textSecondary)
-                                .frame(maxWidth: .infinity, minHeight: 380, alignment: .center)
+                            VStack(spacing: 12) {
+                                Image(systemName: AppConstants.Icons.crashlytics)
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(CompanionTheme.textMuted)
+                                Text(AppStrings.Crashlytics.selectEventPrompt)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(CompanionTheme.textPrimary)
+                                Text("No crash or hang event selected. Choose an item from the list on the left to inspect stack trace and details.")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(CompanionTheme.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: 300)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 380, alignment: .center)
                         }
                     }
                 }

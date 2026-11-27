@@ -8,6 +8,17 @@ public struct ScanHealthSnapshot: Identifiable, Codable, Hashable, Sendable {
     public let hangCount: Int
     public let warningCount: Int
 
+    public var formattedDateString: String {
+        Self.dateFormatter.string(from: date)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "d MMM yyyy, HH:mm"
+        return f
+    }()
+
     public init(
         id: UUID = UUID(),
         date: Date = Date(),

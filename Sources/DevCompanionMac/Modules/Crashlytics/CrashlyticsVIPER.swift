@@ -33,13 +33,28 @@ final class CrashlyticsPresenter {
     var activeFixProposal: AgentFixProposal?
     var lastRevertRecord: PatchRevertRecord?
     var selectedPriority: IssuePriorityFilter = .all {
-        didSet { visibleReportLimit = ProgressiveListChunker.defaultPageSize }
+        didSet {
+            visibleReportLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredReports()
+        }
     }
     var kindFilter: CrashReportKindFilter = .all {
-        didSet { visibleReportLimit = ProgressiveListChunker.defaultPageSize }
+        didSet {
+            visibleReportLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredReports()
+        }
+    }
+    var timeRangeFilter: TimeRangeFilter = .allTime {
+        didSet {
+            visibleReportLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredReports()
+        }
     }
     var searchText: String = "" {
-        didSet { visibleReportLimit = ProgressiveListChunker.defaultPageSize }
+        didSet {
+            visibleReportLimit = ProgressiveListChunker.defaultPageSize
+            syncSelectionWithFilteredReports()
+        }
     }
     var visibleReportLimit: Int = ProgressiveListChunker.defaultPageSize
     var visibleStackFrameLimit: Int = ProgressiveListChunker.defaultPageSize
@@ -102,6 +117,10 @@ final class CrashlyticsPresenter {
         }
     }
 
+    func timeRangeCount(for filter: TimeRangeFilter) -> Int {
+        reports.filter { filter.matches(date: $0.timestamp) }.count
+    }
+
     var filteredReports: [DiagnosticReportItem] {
         let byPriority: [DiagnosticReportItem] = switch selectedPriority {
         case .all: reports
@@ -115,14 +134,39 @@ final class CrashlyticsPresenter {
         case .hang: byPriority.filter { $0.kind == .hang }
         case .memory: byPriority.filter { $0.kind == .memory }
         }
+        let byTime = byKind.filter { timeRangeFilter.matches(date: $0.timestamp) }
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return byKind }
-        return byKind.filter {
+        guard !q.isEmpty else { return byTime }
+        return byTime.filter {
             SmartSearchMatcher.matches(
                 [$0.processName, $0.fileName, $0.summary, $0.humanTitle, $0.whenContext, $0.sourceLocation ?? ""],
                 query: q
             )
         }
+    }
+
+    func syncSelectionWithFilteredReports() {
+        let currentFiltered = filteredReports
+        if currentFiltered.isEmpty {
+            clearActiveSelection()
+        } else if let selID = selectedReportID, let matched = currentFiltered.first(where: { $0.id == selID }) {
+            if activeAnalysis == nil {
+                selectReport(matched)
+            }
+        } else if let first = currentFiltered.first {
+            selectReport(first)
+        }
+    }
+
+    func clearActiveSelection() {
+        selectTask?.cancel()
+        selectTask = nil
+        selectedReportID = nil
+        selectedReportName = ""
+        selectedReportContent = ""
+        activeAnalysis = nil
+        sourceSnippet = nil
+        activeFixProposal = nil
     }
 
     var visibleFilteredReports: ArraySlice<DiagnosticReportItem> {
@@ -227,13 +271,7 @@ final class CrashlyticsPresenter {
 
         reports = loaded
         baselineReportIDs = Set(loaded.map(\.id))
-
-        if selectedReportID == nil, let first = loaded.first {
-            selectReport(first)
-        } else if let currentID = selectedReportID,
-                  let current = loaded.first(where: { $0.id == currentID }) {
-            selectReport(current)
-        }
+        syncSelectionWithFilteredReports()
     }
 
     /// Resolves full stack trace and Swift source code off the main thread only for the single selected report.

@@ -100,6 +100,17 @@ public struct FreezeLagEvent: Identifiable, Sendable, Equatable, Codable {
     public var reason: String
     public var findingID: String?
 
+    public var formattedDateString: String {
+        Self.dateFormatter.string(from: startedAt)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "d MMM yyyy, HH:mm"
+        return f
+    }()
+
     public init(
         id: String = UUID().uuidString,
         startedAt: Date = Date(),

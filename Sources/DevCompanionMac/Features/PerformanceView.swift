@@ -262,7 +262,7 @@ struct PerformanceView: View {
 
                 // 2) Grafik Statis (Captured Freeze & Lag Session Timeline with Duration + Code Hover Popover)
                 StaticFreezeTimelineCard(
-                    events: presenter.capturedFreezeEvents,
+                    events: presenter.filteredFreezeEvents,
                     hoveredEventID: $staticHoverEventID,
                     onClear: { presenter.clearCapturedFreezeHistory() },
                     onSelectEvent: { event in
@@ -335,6 +335,12 @@ struct PerformanceView: View {
                                                             .foregroundStyle(CompanionTheme.mint)
                                                             .clipShape(Capsule())
                                                             .preventSquish()
+                                                    }
+                                                    if !finding.formattedDateString.isEmpty {
+                                                        Text(finding.formattedDateString)
+                                                            .font(.system(size: 8.5, design: .monospaced))
+                                                            .foregroundStyle(CompanionTheme.textMuted)
+                                                            .lineLimit(1)
                                                     }
                                                 }
                                                 Text(finding.title)
@@ -559,7 +565,7 @@ struct PerformanceView: View {
                     Text(freeze.culpritSymbol)
                         .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(CompanionTheme.coral)
-                    Text("\(String(format: "%.2fs", freeze.durationSeconds)) • \(Int(freeze.peakCPUPercent))% CPU • \(String(format: "%.0f MB", freeze.memoryMB))")
+                    Text("\(freeze.formattedDateString) • \(String(format: "%.2fs", freeze.durationSeconds)) • \(Int(freeze.peakCPUPercent))% CPU • \(String(format: "%.0f MB", freeze.memoryMB))")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(CompanionTheme.textSecondary)
                 }
@@ -760,6 +766,25 @@ struct PerformanceView: View {
                 .padding(.vertical, 3)
                 .background(active ? CompanionTheme.glassHigh : CompanionTheme.glassLow)
                 .foregroundStyle(active ? CompanionTheme.textPrimary : CompanionTheme.textSecondary)
+                .clipShape(Capsule())
+                .preventSquish()
+            }
+
+            Divider().frame(height: 14)
+
+            ForEach(TimeRangeFilter.allCases) { tFilter in
+                let active = presenter.timeRangeFilter == tFilter
+                Button(tFilter.rawValue) {
+                    withAnimation(.snappy) {
+                        presenter.timeRangeFilter = tFilter
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: active ? .bold : .medium))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(active ? CompanionTheme.accent.opacity(0.25) : CompanionTheme.glassLow)
+                .foregroundStyle(active ? CompanionTheme.accent : CompanionTheme.textSecondary)
                 .clipShape(Capsule())
                 .preventSquish()
             }

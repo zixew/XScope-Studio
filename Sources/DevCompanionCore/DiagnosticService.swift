@@ -1,5 +1,24 @@
 import Foundation
 
+public enum TimeRangeFilter: String, CaseIterable, Identifiable, Sendable {
+    case allTime = "All Time"
+    case today = "Today"
+    case thisWeek = "7 Days"
+    case thisMonth = "30 Days"
+
+    public var id: String { rawValue }
+
+    public func matches(date: Date, referenceDate: Date = Date()) -> Bool {
+        let interval = referenceDate.timeIntervalSince(date)
+        switch self {
+        case .allTime: return true
+        case .today: return interval >= 0 && interval <= 86_400
+        case .thisWeek: return interval >= 0 && interval <= 7 * 86_400
+        case .thisMonth: return interval >= 0 && interval <= 30 * 86_400
+        }
+    }
+}
+
 public struct DiagnosticReportItem: Identifiable, Sendable, Equatable {
     public enum Kind: String, Sendable {
         case hang = "Hang / Freeze"
@@ -20,6 +39,17 @@ public struct DiagnosticReportItem: Identifiable, Sendable, Equatable {
     public var humanTitle: String
     public var whenContext: String
     public var sourceLocation: String?
+
+    public var formattedDateString: String {
+        Self.dateFormatter.string(from: timestamp)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "d MMM yyyy, HH:mm"
+        return f
+    }()
 
     public var priority: CodeReviewFinding.Severity {
         switch kind {

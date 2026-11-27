@@ -391,4 +391,40 @@ struct SimulatorXIBAndActionTests {
         let inAppTokens = ["OpenDPLKConfirmationVC Window", "SectionCardContainer", "Konfirmasi", "Lanjut", "Nominal Rp 50.000"]
         #expect(!UIHierarchyInspectorService.isSpringBoardHomeScreen(visibleTexts: inAppTokens))
     }
+
+    @Test("TC-AUT-029: TimeRangeFilter correctly filters events by Today, 7 Days, 30 Days and formats dates")
+    func testTimeRangeFilterAndDateFormatting() {
+        let now = Date()
+        let twoHoursAgo = now.addingTimeInterval(-7200)
+        let threeDaysAgo = now.addingTimeInterval(-3 * 86400)
+        let twoWeeksAgo = now.addingTimeInterval(-14 * 86400)
+        let twoMonthsAgo = now.addingTimeInterval(-60 * 86400)
+
+        // All Time matches everything
+        #expect(TimeRangeFilter.allTime.matches(date: twoHoursAgo, referenceDate: now))
+        #expect(TimeRangeFilter.allTime.matches(date: twoMonthsAgo, referenceDate: now))
+
+        // Today matches within 24 hours
+        #expect(TimeRangeFilter.today.matches(date: twoHoursAgo, referenceDate: now))
+        #expect(!TimeRangeFilter.today.matches(date: threeDaysAgo, referenceDate: now))
+
+        // 7 Days matches within a week
+        #expect(TimeRangeFilter.thisWeek.matches(date: threeDaysAgo, referenceDate: now))
+        #expect(!TimeRangeFilter.thisWeek.matches(date: twoWeeksAgo, referenceDate: now))
+
+        // 30 Days matches within a month
+        #expect(TimeRangeFilter.thisMonth.matches(date: twoWeeksAgo, referenceDate: now))
+        #expect(!TimeRangeFilter.thisMonth.matches(date: twoMonthsAgo, referenceDate: now))
+
+        let report = DiagnosticReportItem(
+            id: "test-rep",
+            fileName: "Test.ips",
+            processName: "TestApp",
+            kind: .crash,
+            timestamp: now,
+            summary: "Crash",
+            filePath: "/tmp/Test.ips"
+        )
+        #expect(!report.formattedDateString.isEmpty)
+    }
 }

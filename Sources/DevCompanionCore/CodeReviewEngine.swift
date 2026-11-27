@@ -46,6 +46,20 @@ public struct CodeReviewFinding: Identifiable, Sendable, Equatable, Codable {
     public var detectedAt: Date
     public var isNew: Bool
 
+    public var formattedDateString: String {
+        if detectedAt.timeIntervalSince1970 <= 0 {
+            return ""
+        }
+        return Self.dateFormatter.string(from: detectedAt)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "d MMM yyyy, HH:mm"
+        return f
+    }()
+
     public init(
         id: String? = nil,
         fileName: String,
