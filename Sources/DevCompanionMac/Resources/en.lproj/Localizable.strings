@@ -329,3 +329,24 @@
 "enh.scope_file" = "Per File";
 "enh.scope_directory" = "Per Directory";
 "enh.scope_project" = "Whole Project";
+
+"nav.refactor" = "Refactor";
+"perf.token_saver_toggle" = "Token Saver";
+"perf.local_zero_token_count" = "Local Fix (0T)";
+"perf.deduped_count" = "Deduped";
+"perf.copy_compact_batch" = "Copy Compact Batch";
+"refactor.title" = "Swift Refactor Studio";
+"refactor.subtitle" = "Local structural scan (0 AI tokens) + line-sliced compact AI refactor prompts.";
+"refactor.zero_token_local" = "0-Token Local";
+"refactor.module_filter" = "Filter module/folder…";
+"refactor.scan_button" = "Scan Refactor";
+"refactor.search_placeholder" = "Search file, symbol, or rule…";
+"refactor.no_opportunities" = "No refactor smells found for this filter.";
+"refactor.ready_prompt" = "Click Scan Refactor to analyze Swift files locally (0 AI tokens).";
+"refactor.apply_local_fix" = "Apply Local Fix (0 Tokens)";
+"refactor.compact_prompt_title" = "Compact AI Refactor Prompt";
+"refactor.copy_compact_prompt" = "Copy Compact Prompt";
+"refactor.custom_goal" = "Optional custom refactor goal (e.g. extract protocol, use async/await)…";
+"refactor.select_prompt" = "Select a refactor opportunity on the left to inspect local diff or copy compact AI prompt.";
+"refactor.scan_completed" = "Refactor scan completed";
+"refactor.local_fix_applied" = "Local refactor applied (0 AI tokens)";

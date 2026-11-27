@@ -9,6 +9,31 @@ public enum AgentProviderKind: String, CaseIterable, Sendable, Identifiable {
     public var id: String { rawValue }
 }
 
+public struct TokenEfficiencyStats: Sendable, Equatable {
+    public let compactTokens: Int
+    public let verboseTokens: Int
+    public let savedTokens: Int
+    public let savedPercent: Int
+    public let deduplicatedCount: Int
+    public let localFixCount: Int
+
+    public init(
+        compactTokens: Int,
+        verboseTokens: Int,
+        deduplicatedCount: Int = 0,
+        localFixCount: Int = 0
+    ) {
+        self.compactTokens = max(1, compactTokens)
+        self.verboseTokens = max(self.compactTokens, verboseTokens)
+        self.savedTokens = max(0, self.verboseTokens - self.compactTokens)
+        self.savedPercent = self.verboseTokens > 0
+            ? Int((Double(self.savedTokens) / Double(self.verboseTokens) * 100.0).rounded())
+            : 0
+        self.deduplicatedCount = deduplicatedCount
+        self.localFixCount = localFixCount
+    }
+}
+
 public struct AgentFixProposal: Sendable, Equatable {
     public let diagnosis: String
     public let manualSteps: [String]
@@ -456,6 +481,118 @@ public struct AgentService: Sendable {
         ```
         Please provide a minimal, safe fix preserving surrounding behavior.
         """
+    }
+
+    public func estimateTokens(_ text: String) -> Int {
+        max(1, (text.count + 3) / 4)
+    }
+
+    public func buildCompactFindingPrompt(for finding: CodeReviewFinding, filePath: String?) -> String {
+        let location = filePath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? finding.fileName
+        let snippet = finding.codeSnippet.trimmingCharacters(in: .whitespacesAndNewlines)
+        return """
+        Fix \(finding.severity.rawValue) \(finding.category.rawValue) \(location):\(finding.lineNumber) — \(finding.title).
+        ```swift
+        \(snippet)
+        ```
+        Unified diff only.
+        """
+    }
+
+    public func buildCompactRealtimeLeaksSummaryPrompt(
+        findings: [CodeReviewFinding],
+        freezes: [FreezeLagEvent],
+        crash: CrashAnalysisReport?,
+        snippet: CrashSourceSnippet?
+    ) -> (prompt: String, stats: TokenEfficiencyStats) {
+        var localFixCount = 0
+        var aiFindings: [CodeReviewFinding] = []
+        var seenFindingKeys: Set<String> = []
+        var deduplicatedCount = 0
+
+        for f in findings {
+            let fix = deterministicFix(for: f, filePath: nil)
+            if fix.newSnippet != fix.oldSnippet {
+                localFixCount += 1
+                continue
+            }
+            let key = "\(f.fileName)|\(f.title)"
+            if seenFindingKeys.insert(key).inserted {
+                aiFindings.append(f)
+            } else {
+                deduplicatedCount += 1
+            }
+        }
+
+        var uniqueFreezes: [FreezeLagEvent] = []
+        var seenFreezeKeys: Set<String> = []
+        for ev in freezes {
+            let fileLabel = ev.fileName ?? "Unknown"
+            let key = "\(fileLabel)|\(ev.culpritSymbol)"
+            if seenFreezeKeys.insert(key).inserted {
+                uniqueFreezes.append(ev)
+            } else {
+                deduplicatedCount += 1
+            }
+        }
+
+        var lines: [String] = [
+            "Fix realtime iOS leaks/hangs. Output minimal unified diffs only."
+        ]
+
+        for f in aiFindings.prefix(10) {
+            let code = f.codeSnippet.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+            lines.append("F|\(f.fileName):\(f.lineNumber)|\(f.severity.rawValue)|\(f.title)|\(code.prefix(120))")
+        }
+
+        for ev in uniqueFreezes.prefix(5) {
+            let dur = String(format: "%.1fs", ev.durationSeconds)
+            let loc = ev.fileName.map { "\($0):\(ev.lineNumber ?? 1)" } ?? "runtime"
+            lines.append("H|\(loc)|\(dur)|\(Int(ev.peakCPUPercent))%|\(ev.culpritSymbol)")
+        }
+
+        if let crash {
+            let loc = snippet.map { "\($0.fileName):\($0.lineNumber)" }
+                ?? crash.sourceFileName.map { "\($0):\(crash.sourceLineNumber ?? 1)" }
+                ?? crash.processName
+            lines.append("C|\(loc)|\(crash.exceptionType)|\(crash.culpritSymbol)")
+            if let snippet {
+                let compactSnippet = snippet.snippet
+                    .components(separatedBy: .newlines)
+                    .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                    .prefix(8)
+                    .joined(separator: "\n")
+                lines.append("```swift\n\(compactSnippet)\n```")
+            }
+        }
+
+        let compactPrompt = lines.joined(separator: "\n")
+
+        // Baseline verbose cost if sending each finding + crash separately
+        var verboseChars = 0
+        for f in findings.prefix(15) {
+            verboseChars += buildAntigravityPrompt(for: f, filePath: nil).count
+        }
+        for ev in freezes.prefix(8) {
+            let loc = ev.fileName.map { "\($0):\(ev.lineNumber ?? 1)" } ?? "runtime"
+            verboseChars += "Diagnose freeze in \(loc) (\(ev.durationSeconds)s, \(ev.peakCPUPercent)% CPU) symbol \(ev.culpritSymbol). Provide full explanation and fix.\n".count
+        }
+        if let crash {
+            verboseChars += buildAntigravityCrashPrompt(crash: crash, snippet: snippet).count
+        }
+        if verboseChars == 0 {
+            verboseChars = compactPrompt.count
+        }
+
+        let compactTokens = estimateTokens(compactPrompt)
+        let verboseTokens = max(compactTokens, (verboseChars + 3) / 4)
+        let stats = TokenEfficiencyStats(
+            compactTokens: compactTokens,
+            verboseTokens: verboseTokens,
+            deduplicatedCount: deduplicatedCount,
+            localFixCount: localFixCount
+        )
+        return (compactPrompt, stats)
     }
 
     public func buildAntigravityCrashPrompt(crash: CrashAnalysisReport, snippet: CrashSourceSnippet?) -> String {

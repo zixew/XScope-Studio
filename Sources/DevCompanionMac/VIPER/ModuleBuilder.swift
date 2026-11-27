@@ -10,6 +10,7 @@ final class ModuleBuilder {
     let simulatorPresenter: SimulatorPresenter
     let codeReviewerPresenter: CodeReviewerPresenter
     let performancePresenter: PerformancePresenter
+    let refactorPresenter: RefactorPresenter
     let unitTestPresenter: UnitTestPresenter
     let utilitiesPresenter: UtilitiesPresenter
 
@@ -79,6 +80,14 @@ final class ModuleBuilder {
             clipboard: container.clipboard
         )
         self.unitTestPresenter = unitTestPresenter
+
+        let refactorInteractor = RefactorInteractor(agentService: container.agentService)
+        let refactorPresenter = RefactorPresenter(
+            interactor: refactorInteractor,
+            router: router,
+            clipboard: container.clipboard
+        )
+        self.refactorPresenter = refactorPresenter
 
         let smartInteractor = SmartScanInteractor(
             simulatorService: container.simulatorService,
@@ -236,6 +245,7 @@ final class ModuleBuilder {
         crashlyticsPresenter.resetSessionState()
         codeReviewerPresenter.resetSessionState()
         unitTestPresenter.syncProjectContext(nil)
+        refactorPresenter.resetSessionState()
         utilitiesPresenter.resetProjectState()
         simulatorPresenter.resetSessionState()
         smartScanPresenter.findingsCount = 0

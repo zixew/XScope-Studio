@@ -329,3 +329,24 @@
 "enh.scope_file" = "Per File";
 "enh.scope_directory" = "Per Direktori";
 "enh.scope_project" = "Seluruh Project";
+
+"nav.refactor" = "Refactor";
+"perf.token_saver_toggle" = "Hemat Token";
+"perf.local_zero_token_count" = "Fix Lokal (0T)";
+"perf.deduped_count" = "Dedup";
+"perf.copy_compact_batch" = "Salin Batch Ringkas";
+"refactor.title" = "Swift Refactor Studio";
+"refactor.subtitle" = "Scan struktur lokal (0 token AI) + prompt refactor ringkas per rentang baris.";
+"refactor.zero_token_local" = "Lokal 0-Token";
+"refactor.module_filter" = "Filter modul/folder…";
+"refactor.scan_button" = "Scan Refactor";
+"refactor.search_placeholder" = "Cari file, simbol, atau aturan…";
+"refactor.no_opportunities" = "Tidak ada temuan refactor untuk filter ini.";
+"refactor.ready_prompt" = "Klik Scan Refactor untuk analisa file Swift secara lokal (0 token AI).";
+"refactor.apply_local_fix" = "Terapkan Fix Lokal (0 Token)";
+"refactor.compact_prompt_title" = "Prompt AI Refactor Ringkas";
+"refactor.copy_compact_prompt" = "Salin Prompt Ringkas";
+"refactor.custom_goal" = "Tujuan refactor opsional (mis. extract protocol, ubah ke async/await)…";
+"refactor.select_prompt" = "Pilih item refactor di kiri untuk lihat diff lokal atau salin prompt AI ringkas.";
+"refactor.scan_completed" = "Scan refactor selesai";
+"refactor.local_fix_applied" = "Refactor lokal diterapkan (0 token AI)";

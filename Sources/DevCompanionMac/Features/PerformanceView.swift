@@ -53,6 +53,56 @@ struct PerformanceView: View {
                     }
                 }
 
+                // AI Token Saver Bar for Realtime Leaks & Hangs
+                GlassCard {
+                    let eff = presenter.realtimeTokenEfficiency.stats
+                    FlowLayout(spacing: 10) {
+                        Toggle(isOn: $presenter.compactTokenSaverEnabled) {
+                            Text(AppStrings.Performance.tokenSaverToggle)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(CompanionTheme.textPrimary)
+                        }
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+
+                        Text("\(eff.localFixCount) \(AppStrings.Performance.localZeroTokenCount)")
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(CompanionTheme.mint.opacity(0.16))
+                            .foregroundStyle(CompanionTheme.mint)
+                            .clipShape(Capsule())
+
+                        if eff.deduplicatedCount > 0 {
+                            Text("\(eff.deduplicatedCount) \(AppStrings.Performance.dedupedCount)")
+                                .font(.system(size: 10, weight: .semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(CompanionTheme.amber.opacity(0.16))
+                                .foregroundStyle(CompanionTheme.amber)
+                                .clipShape(Capsule())
+                        }
+
+                        Text("~\(eff.compactTokens)t / ~\(eff.verboseTokens)t (-\(eff.savedPercent)%)")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(CompanionTheme.accent.opacity(0.16))
+                            .foregroundStyle(CompanionTheme.accent)
+                            .clipShape(Capsule())
+
+                        Spacer()
+
+                        Button(AppStrings.Performance.copyCompactBatch) {
+                            presenter.copyCompactRealtimeBatchPrompt()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .disabled(presenter.leakAndHangFindings.isEmpty && presenter.realtimeSessionFreezes.isEmpty && presenter.activeCrashAnalysis == nil)
+                        .preventSquish()
+                    }
+                }
+
                 if !presenter.hasProject, let onChooseProject {
                     GuidedRequirementBanner(
                         icon: AppConstants.Icons.folder,

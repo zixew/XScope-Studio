@@ -82,5 +82,6 @@ enum AppConstants {
         static let magnifyingGlass = "magnifyingglass"
         static let docText = "doc.text"
         static let sparkles = "sparkles"
+        static let refactor = "wand.and.stars"
     }
 }

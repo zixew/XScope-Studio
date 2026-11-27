@@ -8,11 +8,12 @@ enum CompanionModule: String, CaseIterable, Identifiable {
     case performance = "Leaks & Hangs"
     case codeReview = "Code Review"
     case simulator = "Simulator"
+    case refactor = "Refactor"
     case unitTests = "Unit Tests"
     case utilities = "Utilities"
 
     static let monitorModules: [CompanionModule] = [.smartScan, .crashlytics, .performance, .codeReview]
-    static let toolModules: [CompanionModule] = [.simulator, .unitTests, .utilities]
+    static let toolModules: [CompanionModule] = [.simulator, .refactor, .unitTests, .utilities]
 
     var id: String { rawValue }
 
@@ -23,6 +24,7 @@ enum CompanionModule: String, CaseIterable, Identifiable {
         case .simulator: AppStrings.Navigation.simulator
         case .performance: AppStrings.Navigation.leaksAndHangs
         case .codeReview: AppStrings.Navigation.codeReview
+        case .refactor: AppStrings.Navigation.refactor
         case .unitTests: AppStrings.Navigation.unitTests
         case .utilities: AppStrings.Navigation.utilities
         }
@@ -35,6 +37,7 @@ enum CompanionModule: String, CaseIterable, Identifiable {
         case .simulator: AppConstants.Icons.iphone
         case .performance: AppConstants.Icons.performance
         case .codeReview: AppConstants.Icons.shieldCheck
+        case .refactor: AppConstants.Icons.refactor
         case .unitTests: AppConstants.Icons.unitTests
         case .utilities: AppConstants.Icons.utilities
         }

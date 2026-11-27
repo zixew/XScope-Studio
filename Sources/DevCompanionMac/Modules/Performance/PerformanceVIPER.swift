@@ -12,6 +12,13 @@ protocol PerformanceInteractorProtocol: Sendable {
     func resolveProjectCrashSource(for report: CrashAnalysisReport, in projectURL: URL?) -> (analysis: CrashAnalysisReport, snippet: CrashSourceSnippet?)
     func proposeCrashFix(for crash: CrashAnalysisReport, snippet: CrashSourceSnippet?) -> AgentFixProposal
     func buildAntigravityPrompt(for finding: CodeReviewFinding, filePath: String?) -> String
+    func buildCompactFindingPrompt(for finding: CodeReviewFinding, filePath: String?) -> String
+    func buildCompactRealtimeLeaksSummaryPrompt(
+        findings: [CodeReviewFinding],
+        freezes: [FreezeLagEvent],
+        crash: CrashAnalysisReport?,
+        snippet: CrashSourceSnippet?
+    ) -> (prompt: String, stats: TokenEfficiencyStats)
     func buildAntigravityCrashPrompt(crash: CrashAnalysisReport, snippet: CrashSourceSnippet?) -> String
     func listSimulatorProcesses() async -> [SimulatorProcessInfo]
     func listPhysicalDeviceProcesses(deviceID: String, deviceName: String) async -> [SimulatorProcessInfo]
@@ -82,6 +89,24 @@ struct PerformanceInteractor: PerformanceInteractorProtocol {
 
     func buildAntigravityPrompt(for finding: CodeReviewFinding, filePath: String?) -> String {
         agentService.buildAntigravityPrompt(for: finding, filePath: filePath)
+    }
+
+    func buildCompactFindingPrompt(for finding: CodeReviewFinding, filePath: String?) -> String {
+        agentService.buildCompactFindingPrompt(for: finding, filePath: filePath)
+    }
+
+    func buildCompactRealtimeLeaksSummaryPrompt(
+        findings: [CodeReviewFinding],
+        freezes: [FreezeLagEvent],
+        crash: CrashAnalysisReport?,
+        snippet: CrashSourceSnippet?
+    ) -> (prompt: String, stats: TokenEfficiencyStats) {
+        agentService.buildCompactRealtimeLeaksSummaryPrompt(
+            findings: findings,
+            freezes: freezes,
+            crash: crash,
+            snippet: snippet
+        )
     }
 
     func buildAntigravityCrashPrompt(crash: CrashAnalysisReport, snippet: CrashSourceSnippet?) -> String {
@@ -209,6 +234,7 @@ final class PerformancePresenter {
     }
 
     var agentProvider: AgentProviderKind = .antigravityPrompt
+    var compactTokenSaverEnabled: Bool = true
     var agentApiKey: String {
         didSet {
             do {
@@ -684,9 +710,28 @@ final class PerformancePresenter {
         router.statusMessage = AppStrings.Common.copyDiff
     }
 
+    var realtimeTokenEfficiency: (prompt: String, stats: TokenEfficiencyStats) {
+        let activeFreezes = leakScope == .realtimeSession ? realtimeSessionFreezes : capturedFreezeEvents
+        return interactor.buildCompactRealtimeLeaksSummaryPrompt(
+            findings: leakAndHangFindings,
+            freezes: activeFreezes,
+            crash: activeCrashAnalysis,
+            snippet: crashSourceSnippet
+        )
+    }
+
+    func copyCompactRealtimeBatchPrompt(openApp: Bool = true) {
+        let bundle = realtimeTokenEfficiency
+        clipboard.copyString(bundle.prompt)
+        router.statusMessage = "\(AppStrings.Performance.antigravityPromptCopied) (~\(bundle.stats.compactTokens) tokens, -\(bundle.stats.savedPercent)%)"
+        if openApp { router.openAntigravity() }
+    }
+
     func copyAntigravityFindingPrompt(openApp: Bool = true) {
         guard let finding = leakAndHangFindings.first(where: { $0.id == selectedFindingID }) else { return }
-        let prompt = interactor.buildAntigravityPrompt(for: finding, filePath: activeFixProposal?.filePath)
+        let prompt = compactTokenSaverEnabled
+            ? interactor.buildCompactFindingPrompt(for: finding, filePath: activeFixProposal?.filePath)
+            : interactor.buildAntigravityPrompt(for: finding, filePath: activeFixProposal?.filePath)
         clipboard.copyString(prompt)
         router.statusMessage = AppStrings.Performance.antigravityPromptCopied
         if openApp { router.openAntigravity() }

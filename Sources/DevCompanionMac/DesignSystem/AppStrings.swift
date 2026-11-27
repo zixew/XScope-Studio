@@ -83,6 +83,7 @@ enum AppStrings {
         static var simulator: String { loc("nav.simulator") }
         static var leaksAndHangs: String { loc("nav.leaks_and_hangs") }
         static var codeReview: String { loc("nav.code_review") }
+        static var refactor: String { loc("nav.refactor") }
         static var unitTests: String { loc("nav.unit_tests") }
         static var utilities: String { loc("nav.utilities") }
     }
@@ -278,6 +279,10 @@ enum AppStrings {
         static var staticFreezeGraphSub: String { loc("perf.static_freeze_graph_sub") }
         static var noFreezeCaptured: String { loc("perf.no_freeze_captured") }
         static var clearFreezeHistory: String { loc("perf.clear_freeze_history") }
+        static var tokenSaverToggle: String { loc("perf.token_saver_toggle") }
+        static var localZeroTokenCount: String { loc("perf.local_zero_token_count") }
+        static var dedupedCount: String { loc("perf.deduped_count") }
+        static var copyCompactBatch: String { loc("perf.copy_compact_batch") }
         static var clickToInspectFix: String { loc("perf.click_to_inspect_fix") }
         static var freezeFlatlineBadge: String { loc("perf.freeze_flatline_badge") }
         static var newBadge: String { loc("perf.new_badge") }
@@ -548,5 +553,23 @@ enum AppStrings {
             case .project: loc("enh.scope_project")
             }
         }
+    }
+
+    enum Refactor {
+        static var title: String { loc("refactor.title") }
+        static var subtitle: String { loc("refactor.subtitle") }
+        static var zeroTokenLocal: String { loc("refactor.zero_token_local") }
+        static var moduleFilterPlaceholder: String { loc("refactor.module_filter") }
+        static var scanButton: String { loc("refactor.scan_button") }
+        static var searchPlaceholder: String { loc("refactor.search_placeholder") }
+        static var noOpportunities: String { loc("refactor.no_opportunities") }
+        static var readyPrompt: String { loc("refactor.ready_prompt") }
+        static var applyLocalFix: String { loc("refactor.apply_local_fix") }
+        static var compactPromptTitle: String { loc("refactor.compact_prompt_title") }
+        static var copyCompactPrompt: String { loc("refactor.copy_compact_prompt") }
+        static var customGoalPlaceholder: String { loc("refactor.custom_goal") }
+        static var selectPrompt: String { loc("refactor.select_prompt") }
+        static var scanCompleted: String { loc("refactor.scan_completed") }
+        static var localFixApplied: String { loc("refactor.local_fix_applied") }
     }
 }

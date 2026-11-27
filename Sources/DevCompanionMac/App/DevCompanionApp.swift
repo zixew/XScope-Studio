@@ -596,6 +596,12 @@ struct MainContentView: View {
             }
             let activeTargets = router.bootedSimulators.count + router.activePhysicalDevices.count
             return activeTargets > 0 ? ("\(activeTargets)", CompanionTheme.mint) : nil
+        case .refactor:
+            let rf = builder.refactorPresenter
+            if rf.isScanning {
+                return ("SCAN", CompanionTheme.accent)
+            }
+            return rf.opportunities.isEmpty ? nil : ("\(rf.opportunities.count)", CompanionTheme.accent)
         case .unitTests:
             let tests = builder.unitTestPresenter
             if tests.isRunningTests || tests.isCheckingCoverage {
@@ -709,6 +715,11 @@ struct MainContentView: View {
                 case .codeReview:
                     CodeReviewerView(
                         presenter: builder.codeReviewerPresenter,
+                        onChooseProject: { builder.smartScanPresenter.chooseProjectFolder() }
+                    )
+                case .refactor:
+                    RefactorView(
+                        presenter: builder.refactorPresenter,
                         onChooseProject: { builder.smartScanPresenter.chooseProjectFolder() }
                     )
                 case .unitTests:
