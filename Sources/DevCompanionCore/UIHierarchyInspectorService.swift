@@ -484,6 +484,26 @@ public struct UIHierarchyInspectorService: Sendable {
                 accentHex: "#38BDF8",
                 cornerRadius: 24,
                 fontSize: 14
+            ),
+            UIComponentNode(
+                id: "live-z1-rootview",
+                parentID: "live-z0-root",
+                className: "UIView",
+                name: primaryMatch.map { "\($0.fileName.replacingOccurrences(of: ".swift", with: "")) View" } ?? "\(appName) Root View",
+                kind: .banner,
+                zLayer: 1,
+                normalizedX: 0.0,
+                normalizedY: 0.0,
+                normalizedWidth: 1.0,
+                normalizedHeight: 1.0,
+                fileName: primaryMatch?.fileName ?? "\(appName)View.swift",
+                filePath: primaryMatch?.filePath,
+                lineNumber: primaryMatch?.lineNumber ?? 1,
+                codeSnippet: primaryMatch?.snippet ?? "override func viewDidLoad()",
+                displayText: appName,
+                accentHex: "#38BDF8",
+                cornerRadius: 22,
+                fontSize: 13
             )
         ]
 
@@ -545,9 +565,9 @@ public struct UIHierarchyInspectorService: Sendable {
             }
             // If a rectangle contains multiple child labels/buttons (e.g. Fast Menu card with QRIS/BRIZZI/E Wallet/BRIVA),
             // it MUST be a structural `.cardContainer` (translucent backing frame) so its screenshot isn't duplicated behind its children!
-            let kind: UIComponentNode.Kind = if containedTexts.count >= 2 {
+            let kind: UIComponentNode.Kind = if containedTexts.count >= 3 || (box.width > 0.68 && box.height > 0.14) {
                 .cardContainer
-            } else if box.height > 0.18 && box.minY < 0.55 {
+            } else if box.height > 0.16 && box.minY < 0.60 {
                 .banner
             } else if box.minY > 0.74 && box.height < 0.13 {
                 .button
