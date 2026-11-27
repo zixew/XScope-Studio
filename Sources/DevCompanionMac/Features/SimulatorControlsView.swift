@@ -147,7 +147,9 @@ struct SimulatorControlsView: View {
                         Text(
                             presenter.selectedTargetID == nil
                                 ? "Select Target First…"
-                                : (presenter.filteredRunningApps.isEmpty ? "No Developer App Open" : "Select Opened App…")
+                                : (presenter.isTargetAtHomeScreen
+                                    ? "No App Open (Home Screen)"
+                                    : (presenter.filteredRunningApps.isEmpty ? "No Developer App Open" : "Select Opened App…"))
                         )
                         .tag(SimulatorProcessInfo?.none)
                         ForEach(presenter.filteredRunningApps) { app in
@@ -155,9 +157,31 @@ struct SimulatorControlsView: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 185)
+                    .frame(width: 195)
                     .disabled(presenter.selectedTargetID == nil)
                     .fixedSize(horizontal: true, vertical: false)
+
+                    Button {
+                        Task { await presenter.refreshOpenedAppsNow(quiet: false) }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: AppConstants.Icons.arrowClockwise)
+                            Text("Refresh App")
+                        }
+                        .font(.system(size: 10.5, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(presenter.selectedTargetID == nil || presenter.isCapturingHierarchy)
+                    .help("Refresh opened foreground application on the selected Target")
+                    .preventSquish()
+
+                    Toggle("Auto", isOn: $presenter.autoRefreshRunningApps)
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 10))
+                        .foregroundStyle(CompanionTheme.textSecondary)
+                        .help("Automatically detect when an app is opened or closed on the selected Target")
+                        .preventSquish()
 
                     HStack(spacing: 2) {
                         ForEach(UIRenderDimensionMode.allCases) { mode in

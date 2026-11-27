@@ -212,4 +212,18 @@ struct SimulatorXIBAndActionTests {
         #expect(usbDev.isWiredUSB == true && usbDev.connectionBadge == "USB")
         #expect(wifiDev.isWiredUSB == false && wifiDev.connectionBadge == "Wi-Fi")
     }
+
+    @Test("UIHierarchyInspectorService detects iOS SpringBoard Home Screen and ProcessTelemetryService detects display backlight off")
+    func detectsHomeScreenAndDisplayBacklight() {
+        let homeTexts = ["Find My", "Shortcuts", "Files", "Contacts", "WhatsApp", "BCA mobile", "Shopee", "ChatGPT", "Music"]
+        #expect(UIHierarchyInspectorService.isSpringBoardHomeScreen(visibleTexts: homeTexts) == true)
+
+        let inAppTexts = ["Fast Menu", "QRIS", "BRIZZI", "E Wallet", "BRIVA", "Login"]
+        #expect(UIHierarchyInspectorService.isSpringBoardHomeScreen(visibleTexts: inAppTexts) == false)
+
+        let offJSON = #"{"result":{"backlightState":"off"}}"#.data(using: .utf8)!
+        let onJSON = #"{"result":{"backlightState":"on"}}"#.data(using: .utf8)!
+        #expect(ProcessTelemetryService.parseDisplayBacklightOn(from: offJSON) == false)
+        #expect(ProcessTelemetryService.parseDisplayBacklightOn(from: onJSON) == true)
+    }
 }

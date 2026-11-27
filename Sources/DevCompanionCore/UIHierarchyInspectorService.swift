@@ -277,6 +277,29 @@ public struct UIHierarchyInspectorService: Sendable {
         buildHierarchy(for: process, screenshotURL: nil, in: projectURL)
     }
 
+    private static let springBoardHomeLabels: Set<String> = [
+        "find my", "shortcuts", "files", "contacts", "settings", "app store",
+        "safari", "photos", "camera", "clock", "calendar", "google calendar",
+        "whatsapp", "instagram", "tiktok", "shopee", "chatgpt", "discord",
+        "telegram", "music", "video", "wallet", "weather", "notes",
+        "reminders", "mail", "testflight", "maps", "podcasts", "health",
+        "fitness", "tips", "bca mobile", "mybca", "mytelkomsel",
+        "access by kai", "mobile legends", "duolingo", "vysor"
+    ]
+
+    /// Detects whether the captured device screen is currently on the iOS Home Screen (`SpringBoard`) rather than inside an opened app.
+    public static func isSpringBoardHomeScreen(visibleTexts: [String]) -> Bool {
+        var matchedHomeIcons: Set<String> = []
+        for raw in visibleTexts {
+            let clean = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard clean.count >= 3 else { continue }
+            if springBoardHomeLabels.contains(clean) {
+                matchedHomeIcons.insert(clean)
+            }
+        }
+        return matchedHomeIcons.count >= 3
+    }
+
     /// Builds a real-time 2D/3D UI hierarchy directly from the live captured iPhone/Simulator screenshot using Apple Vision OCR & Rectangle Detection,
     /// then matches each visible element back to its Swift source file & line in `projectURL`.
     public func buildHierarchy(
@@ -285,8 +308,7 @@ public struct UIHierarchyInspectorService: Sendable {
         in projectURL: URL?
     ) -> [UIComponentNode] {
         if let screenshotURL,
-           let liveNodes = extractLiveNodesFromScreenshot(at: screenshotURL, appName: process.name, in: projectURL),
-           !liveNodes.isEmpty {
+           let liveNodes = extractLiveNodesFromScreenshot(at: screenshotURL, appName: process.name, in: projectURL) {
             return liveNodes
         }
 
@@ -327,6 +349,12 @@ public struct UIHierarchyInspectorService: Sendable {
         // Collect all visible text tokens to locate the exact active ViewController / SwiftUI View across the entire project
         let visibleTexts = textObs.compactMap { $0.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.count >= 2 }
+
+        // If the device is sitting on the iOS Home Screen (SpringBoard), no app is actively open in the foreground!
+        if Self.isSpringBoardHomeScreen(visibleTexts: visibleTexts) {
+            return []
+        }
+
         let screenContext = projectURL.map { resolveActiveScreenContext(visibleTexts: visibleTexts, in: $0) }
         let fallbackMatch: ScreenSourceMatch? = if screenContext?.primaryMatch == nil, let projectURL,
                                                    let scannedFirst = scanProjectUIComponents(in: projectURL, appName: appName).first(where: { $0.filePath != nil }) {

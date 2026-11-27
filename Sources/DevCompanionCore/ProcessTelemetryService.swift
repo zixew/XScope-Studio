@@ -160,7 +160,37 @@ public struct ProcessTelemetryService: Sendable {
         return Self.parseSimulatorProcesses(from: output.stdout)
     }
 
+    public func isPhysicalDeviceDisplayOn(deviceID: String) async -> Bool {
+        let tempDispURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("devcompanion_disp_\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: tempDispURL) }
+        guard let out = try? await runner.run(
+            "/usr/bin/xcrun",
+            arguments: ["devicectl", "device", "info", "displays", "--device", deviceID, "--json-output", tempDispURL.path],
+            workingDirectory: nil
+        ),
+        out.isSuccess,
+        let data = try? Data(contentsOf: tempDispURL)
+        else {
+            return true
+        }
+        return Self.parseDisplayBacklightOn(from: data)
+    }
+
+    public static func parseDisplayBacklightOn(from data: Data) -> Bool {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let resultObj = json["result"] as? [String: Any],
+              let state = (resultObj["backlightState"] as? String)?.lowercased()
+        else { return true }
+        return state != "off"
+    }
+
     public func listRunningPhysicalDeviceProcesses(deviceID: String, deviceName: String) async -> [SimulatorProcessInfo] {
+        // 0. If the physical iPhone display backlight is OFF (locked/asleep), no app is actively open on screen
+        guard await isPhysicalDeviceDisplayOn(deviceID: deviceID) else {
+            return []
+        }
+
         let tempProcURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("devcompanion_proc_\(UUID().uuidString).json")
         let tempAppsURL = FileManager.default.temporaryDirectory

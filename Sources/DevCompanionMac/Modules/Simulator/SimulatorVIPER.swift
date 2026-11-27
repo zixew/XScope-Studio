@@ -129,6 +129,12 @@ final class SimulatorPresenter {
     var workspaceTab: SimulatorWorkspaceTab = .uiInspector
     var renderMode: UIRenderDimensionMode = .render3D
     var runningApps: [SimulatorProcessInfo] = []
+    var isTargetAtHomeScreen: Bool = false
+    var autoRefreshRunningApps: Bool = true {
+        didSet {
+            updateAutoRefreshLoop()
+        }
+    }
     var wiredUSBOnly: Bool = false {
         didSet {
             if let targetID = selectedTargetID, !availableTargets.contains(where: { $0.id == targetID }) {
@@ -139,7 +145,9 @@ final class SimulatorPresenter {
     var selectedTargetID: String? {
         didSet {
             if oldValue != selectedTargetID {
+                isTargetAtHomeScreen = false
                 syncTargetSelectionToRouterAndPickOpenedApp()
+                updateAutoRefreshLoop()
             }
         }
     }
@@ -233,6 +241,7 @@ final class SimulatorPresenter {
     private var logFlushTask: Task<Void, Never>?
     private var watchTask: Task<Void, Never>?
     private var liveScreenSyncTask: Task<Void, Never>?
+    private var appAutoRefreshTask: Task<Void, Never>?
 
     init(
         interactor: any SimulatorInteractorProtocol,
@@ -344,7 +353,8 @@ final class SimulatorPresenter {
     }
 
     var filteredRunningApps: [SimulatorProcessInfo] {
-        guard let targetID = selectedTargetID,
+        guard !isTargetAtHomeScreen,
+              let targetID = selectedTargetID,
               let target = availableTargets.first(where: { $0.id == targetID }) else {
             return []
         }
@@ -355,6 +365,50 @@ final class SimulatorPresenter {
             isPhysicalDevice: target.isPhysicalDevice,
             projectName: projName
         )
+    }
+
+    private func updateAutoRefreshLoop() {
+        appAutoRefreshTask?.cancel()
+        appAutoRefreshTask = nil
+        guard autoRefreshRunningApps, selectedTargetID != nil else { return }
+        appAutoRefreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(2500))
+                guard let self, !Task.isCancelled, self.selectedTargetID != nil, self.autoRefreshRunningApps else { break }
+                await self.refreshOpenedAppsNow(quiet: true)
+            }
+        }
+    }
+
+    func refreshOpenedAppsNow(quiet: Bool = false) async {
+        let apps = await interactor.listRunningApps(physicalDevices: router.activePhysicalDevices)
+        runningApps = apps
+        guard let targetID = selectedTargetID,
+              let target = availableTargets.first(where: { $0.id == targetID }) else {
+            selectedRunningApp = nil
+            return
+        }
+        let candidates = ProcessTelemetryService.filterOpenedAppsForTarget(
+            apps,
+            targetID: target.id,
+            isPhysicalDevice: target.isPhysicalDevice,
+            projectName: router.projectURL?.lastPathComponent
+        )
+        guard let firstCandidate = candidates.first else {
+            isTargetAtHomeScreen = false
+            selectedRunningApp = nil
+            componentNodes = []
+            return
+        }
+        // If previously on Home Screen or no app selected yet, probe the screen with firstCandidate to check if the user opened the app
+        if isTargetAtHomeScreen || selectedRunningApp == nil || !quiet {
+            isTargetAtHomeScreen = false
+            if selectedRunningApp?.id != firstCandidate.id {
+                selectedRunningApp = firstCandidate
+            } else {
+                await captureHierarchyForSelectedApp()
+            }
+        }
     }
 
     private func syncTargetSelectionToRouterAndPickOpenedApp() {
@@ -451,6 +505,20 @@ final class SimulatorPresenter {
             return (decoded, extracted, croppedMap)
         }.value
 
+        // If Vision detected the iOS Home Screen (SpringBoard), clear Opened App so Home Screen is never shown as a running app!
+        if nodes.isEmpty {
+            isTargetAtHomeScreen = true
+            selectedRunningApp = nil
+            componentNodes = []
+            selectedNodeID = nil
+            draftNode = nil
+            liveScreenCGImage = nil
+            preCroppedTextures = [:]
+            router.statusMessage = "Device is on iOS Home Screen — open a developer app to inspect"
+            return
+        }
+
+        isTargetAtHomeScreen = false
         if let screenFileURL {
             liveScreenImagePath = screenFileURL.path
         }
