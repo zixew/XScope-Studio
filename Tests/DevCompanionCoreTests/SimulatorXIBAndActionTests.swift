@@ -226,4 +226,80 @@ struct SimulatorXIBAndActionTests {
         #expect(ProcessTelemetryService.parseDisplayBacklightOn(from: offJSON) == false)
         #expect(ProcessTelemetryService.parseDisplayBacklightOn(from: onJSON) == true)
     }
+
+    @Test("Privacy Guard enforces fail-closed Xcode-built/debugged apps and blocks non-Xcode/private foreground screens")
+    func enforcesXcodeOnlyPrivacyGuard() {
+        let procsJSON = """
+        {
+          "result": {
+            "runningProcesses": [
+              { "processIdentifier": 410, "executable": "file:///Developer/usr/libexec/debugserver" },
+              { "processIdentifier": 9242, "executable": "file:///private/var/containers/Bundle/Application/C/WhatsApp.app/WhatsApp" },
+              { "processIdentifier": 9301, "executable": "file:///private/var/containers/Bundle/Application/D/PrivateBankApp.app/PrivateBankApp" },
+              { "processIdentifier": 9500, "executable": "file:///private/var/containers/Bundle/Application/111/BRImoDev.app/BRImoDev" }
+            ]
+          }
+        }
+        """.data(using: .utf8)!
+
+        // 1. Fail-closed: when allowedDeveloperApps is empty, zero apps leak through (even if not in static blocklist)
+        let failClosed = ProcessTelemetryService.parsePhysicalDeviceProcesses(
+            from: procsJSON,
+            deviceID: "DEV-1",
+            deviceName: "iPhone 12",
+            allowedDeveloperApps: []
+        )
+        #expect(failClosed.isEmpty)
+
+        // 2. When BRImoDev is builtByDeveloper == true and debugserver is active, only BRImoDev is returned and tagged [XCODE DEBUG]
+        let verified = ProcessTelemetryService.parsePhysicalDeviceProcesses(
+            from: procsJSON,
+            deviceID: "DEV-1",
+            deviceName: "iPhone 12",
+            allowedDeveloperApps: ["brimodev"]
+        )
+        #expect(verified.count == 1)
+        #expect(verified.first?.name == "BRImoDev")
+        #expect(verified.first?.isBuiltByXcode == true)
+        #expect(verified.first?.isBeingDebuggedByXcode == true)
+        #expect(verified.first?.xcodePrivacyBadge == "[XCODE DEBUG]")
+
+        // 3. If open Xcode project is "Brimo-ios", an unrelated app on the target without debugserver is blocked
+        let mixedProcs = [
+            SimulatorProcessInfo(id: 1, name: "UnrelatedDevApp", deviceID: "DEV-1", deviceName: "iPhone 12", isUserApp: true, isBuiltByXcode: true, isBeingDebuggedByXcode: false),
+            SimulatorProcessInfo(id: 2, name: "BRImoDev", deviceID: "DEV-1", deviceName: "iPhone 12", isUserApp: true, isBuiltByXcode: true, isBeingDebuggedByXcode: false)
+        ]
+        let scoped = ProcessTelemetryService.filterOpenedAppsForTarget(
+            mixedProcs,
+            targetID: "DEV-1",
+            isPhysicalDevice: true,
+            projectName: "Brimo-ios"
+        )
+        #expect(scoped.map(\.name) == ["BRImoDev"])
+
+        // 4. Foreground Privacy Guard blocks lock screen & private app screen with 0 project source matches
+        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
+            visibleTexts: ["Enter Passcode", "Emergency", "Cancel"],
+            appName: "BRImoDev",
+            hasProjectFiles: true,
+            matchedProjectTextCount: 0,
+            hasPrimaryMatch: false
+        ) == true)
+
+        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
+            visibleTexts: ["Chats", "Updates", "Communities", "Calls", "Search"],
+            appName: "BRImoDev",
+            hasProjectFiles: true,
+            matchedProjectTextCount: 0,
+            hasPrimaryMatch: false
+        ) == true)
+
+        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
+            visibleTexts: ["Fast Menu", "QRIS", "BRIZZI", "BRIVA"],
+            appName: "BRImoDev",
+            hasProjectFiles: true,
+            matchedProjectTextCount: 3,
+            hasPrimaryMatch: true
+        ) == false)
+    }
 }

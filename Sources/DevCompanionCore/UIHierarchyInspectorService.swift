@@ -287,6 +287,13 @@ public struct UIHierarchyInspectorService: Sendable {
         "access by kai", "mobile legends", "duolingo", "vysor"
     ]
 
+    private static let lockAndPrivateScreenPhrases: Set<String> = [
+        "enter passcode", "iphone is locked", "swipe up to unlock", "face id",
+        "touch id or enter passcode", "emergency", "slide to power off",
+        "whatsapp", "end-to-end encrypted", "imessage", "new message",
+        "camera roll", "recently deleted", "shared albums"
+    ]
+
     /// Detects whether the captured device screen is currently on the iOS Home Screen (`SpringBoard`) rather than inside an opened app.
     public static func isSpringBoardHomeScreen(visibleTexts: [String]) -> Bool {
         var matchedHomeIcons: Set<String> = []
@@ -298,6 +305,40 @@ public struct UIHierarchyInspectorService: Sendable {
             }
         }
         return matchedHomeIcons.count >= 3
+    }
+
+    /// Foreground Privacy Guard: blocks the captured screen if the device is on the iOS Home Screen, Lock/Passcode screen,
+    /// or inside a private/non-Xcode application whose visible text does not match the active Xcode project.
+    public static func isPrivateOrNonXcodeForegroundScreen(
+        visibleTexts: [String],
+        appName: String,
+        hasProjectFiles: Bool,
+        matchedProjectTextCount: Int,
+        hasPrimaryMatch: Bool
+    ) -> Bool {
+        if isSpringBoardHomeScreen(visibleTexts: visibleTexts) {
+            return true
+        }
+        let lowerTexts = visibleTexts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        if lowerTexts.contains(where: { text in
+            lockAndPrivateScreenPhrases.contains(text)
+        }) && matchedProjectTextCount == 0 {
+            return true
+        }
+        // If an Xcode project with Swift screen files is open, require at least 1 visible text match in the Xcode project source
+        // (or the Xcode app name itself visible on screen) when >= 4 texts are detected on screen.
+        if hasProjectFiles && lowerTexts.count >= 4 && matchedProjectTextCount == 0 && !hasPrimaryMatch {
+            let cleanApp = appName
+                .replacingOccurrences(of: "dev", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "ocp", with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            let mentionsApp = cleanApp.count >= 3 && lowerTexts.contains(where: { $0.contains(cleanApp) })
+            if !mentionsApp {
+                return true
+            }
+        }
+        return false
     }
 
     /// Builds a real-time 2D/3D UI hierarchy directly from the live captured iPhone/Simulator screenshot using Apple Vision OCR & Rectangle Detection,
@@ -352,10 +393,22 @@ public struct UIHierarchyInspectorService: Sendable {
 
         // If the device is sitting on the iOS Home Screen (SpringBoard), no app is actively open in the foreground!
         if Self.isSpringBoardHomeScreen(visibleTexts: visibleTexts) {
+            try? FileManager.default.removeItem(at: screenshotURL)
             return []
         }
 
+        let hasProjectScreenFiles = projectURL.map { !cachedScreenFiles(in: $0).isEmpty } ?? false
         let screenContext = projectURL.map { resolveActiveScreenContext(visibleTexts: visibleTexts, in: $0) }
+        if Self.isPrivateOrNonXcodeForegroundScreen(
+            visibleTexts: visibleTexts,
+            appName: appName,
+            hasProjectFiles: hasProjectScreenFiles,
+            matchedProjectTextCount: screenContext?.textMatches.count ?? 0,
+            hasPrimaryMatch: screenContext?.primaryMatch != nil
+        ) {
+            try? FileManager.default.removeItem(at: screenshotURL)
+            return []
+        }
         let fallbackMatch: ScreenSourceMatch? = if screenContext?.primaryMatch == nil, let projectURL,
                                                    let scannedFirst = scanProjectUIComponents(in: projectURL, appName: appName).first(where: { $0.filePath != nil }) {
             ScreenSourceMatch(

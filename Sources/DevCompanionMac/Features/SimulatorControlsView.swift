@@ -148,16 +148,16 @@ struct SimulatorControlsView: View {
                             presenter.selectedTargetID == nil
                                 ? "Select Target First…"
                                 : (presenter.isTargetAtHomeScreen
-                                    ? "No App Open (Home Screen)"
-                                    : (presenter.filteredRunningApps.isEmpty ? "No Developer App Open" : "Select Opened App…"))
+                                    ? "No Xcode App in Foreground"
+                                    : (presenter.filteredRunningApps.isEmpty ? "No Xcode App Open" : "Select Xcode App…"))
                         )
                         .tag(SimulatorProcessInfo?.none)
                         ForEach(presenter.filteredRunningApps) { app in
-                            Text("\(app.name) (PID \(app.id))").tag(SimulatorProcessInfo?.some(app))
+                            Text("\(app.xcodePrivacyBadge) \(app.name) (PID \(app.id))").tag(SimulatorProcessInfo?.some(app))
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 195)
+                    .frame(width: 215)
                     .disabled(presenter.selectedTargetID == nil)
                     .fixedSize(horizontal: true, vertical: false)
 

@@ -7,8 +7,17 @@ public struct SimulatorProcessInfo: Identifiable, Sendable, Equatable, Hashable 
     public let deviceName: String?
     public let simulatorUDID: String?
     public let isUserApp: Bool
+    public let isBuiltByXcode: Bool
+    public let isBeingDebuggedByXcode: Bool
 
     public var isPhysicalDevice: Bool { deviceID != nil }
+
+    public var xcodePrivacyBadge: String {
+        if isBeingDebuggedByXcode {
+            return "[XCODE DEBUG]"
+        }
+        return "[XCODE BUILD]"
+    }
 
     public var displayLabel: String {
         if let deviceName, isPhysicalDevice {
@@ -23,7 +32,9 @@ public struct SimulatorProcessInfo: Identifiable, Sendable, Equatable, Hashable 
         deviceID: String? = nil,
         deviceName: String? = nil,
         simulatorUDID: String? = nil,
-        isUserApp: Bool = true
+        isUserApp: Bool = true,
+        isBuiltByXcode: Bool = true,
+        isBeingDebuggedByXcode: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -31,6 +42,8 @@ public struct SimulatorProcessInfo: Identifiable, Sendable, Equatable, Hashable 
         self.deviceName = deviceName
         self.simulatorUDID = simulatorUDID
         self.isUserApp = isUserApp
+        self.isBuiltByXcode = isBuiltByXcode
+        self.isBeingDebuggedByXcode = isBeingDebuggedByXcode
     }
 }
 
@@ -200,8 +213,9 @@ public struct ProcessTelemetryService: Sendable {
             try? FileManager.default.removeItem(at: tempAppsURL)
         }
 
-        // 1. Fetch developer-built apps (`builtByDeveloper == true`) installed via Xcode on this device
-        var allowedDevApps: Set<String>? = nil
+        // 1. Fetch developer-built apps (`builtByDeveloper == true`) installed via Xcode on this device.
+        // Fail-closed for privacy: if `devicectl device info apps` fails or returns empty, no private/AppStore app is ever allowed.
+        var allowedDevApps: Set<String> = []
         if let appsOut = try? await runner.run(
             "/usr/bin/xcrun",
             arguments: ["devicectl", "device", "info", "apps", "--device", deviceID, "--json-output", tempAppsURL.path],
@@ -212,7 +226,7 @@ public struct ProcessTelemetryService: Sendable {
             allowedDevApps = Self.parseDeveloperAppNames(from: appsData)
         }
 
-        // 2. Fetch running processes and intersect with developer-built apps
+        // 2. Fetch running processes and intersect strictly with Xcode-built / Xcode-debugged apps
         guard let output = try? await runner.run(
             "/usr/bin/xcrun",
             arguments: ["devicectl", "device", "info", "processes", "--device", deviceID, "--json-output", tempProcURL.path],
@@ -305,11 +319,14 @@ public struct ProcessTelemetryService: Sendable {
 
             let simUDID = extractSimulatorUDID(from: path)
             let isUser = path.contains("Containers/Bundle/Application")
+            let isXcodeDebugged = stdout.contains("debugserver") || stdout.contains("lldb-rpc-server")
             let info = SimulatorProcessInfo(
                 id: pid,
                 name: appName,
                 simulatorUDID: simUDID,
-                isUserApp: isUser
+                isUserApp: isUser,
+                isBuiltByXcode: isUser,
+                isBeingDebuggedByXcode: isUser && isXcodeDebugged
             )
             if isUser {
                 userApps.append(info)
@@ -327,16 +344,72 @@ public struct ProcessTelemetryService: Sendable {
         return seg.isEmpty ? nil : String(seg)
     }
 
+    /// Discovers app binary names built directly by Xcode on this Mac (`DerivedData/*/Build/Products/*/*.app` and the active Xcode project).
+    public static func discoverLocalXcodeBuiltAppNames(
+        derivedDataURL: URL? = nil,
+        projectURL: URL? = nil
+    ) -> Set<String> {
+        var names: Set<String> = []
+        if let projectURL {
+            let base = projectURL.deletingPathExtension().lastPathComponent
+            let clean = base
+                .replacingOccurrences(of: "-ios", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "_ios", with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if clean.count >= 2 {
+                names.insert(clean)
+            }
+            names.insert(base.lowercased())
+        }
+
+        let root = derivedDataURL ?? FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Developer/Xcode/DerivedData", isDirectory: true)
+        guard let projectDirs = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return names
+        }
+
+        for projDir in projectDirs.prefix(40) {
+            let productsDir = projDir.appendingPathComponent("Build/Products", isDirectory: true)
+            guard let configDirs = try? FileManager.default.contentsOfDirectory(
+                at: productsDir,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for cfgDir in configDirs {
+                guard let items = try? FileManager.default.contentsOfDirectory(
+                    at: cfgDir,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                ) else { continue }
+                for item in items where item.pathExtension == "app" {
+                    let appName = item.deletingPathExtension().lastPathComponent.lowercased()
+                    if !appName.isEmpty && !nonDeveloperAppBlocklist.contains(appName) {
+                        names.insert(appName)
+                    }
+                }
+            }
+        }
+        return names
+    }
+
     public static func filterOpenedAppsForTarget(
         _ processes: [SimulatorProcessInfo],
         targetID: String?,
         isPhysicalDevice: Bool,
-        projectName: String? = nil
+        projectName: String? = nil,
+        localXcodeAppNames: Set<String>? = nil
     ) -> [SimulatorProcessInfo] {
         guard let targetID, !targetID.isEmpty else { return [] }
 
         let targetApps = processes.filter { proc in
-            guard proc.isUserApp else { return false }
+            // Privacy rule: only apps built by Xcode (`isBuiltByXcode`) or actively debugged by Xcode (`isBeingDebuggedByXcode`)
+            guard proc.isUserApp, (proc.isBuiltByXcode || proc.isBeingDebuggedByXcode) else { return false }
+            guard !nonDeveloperAppBlocklist.contains(proc.name.lowercased()) else { return false }
             if isPhysicalDevice {
                 return proc.isPhysicalDevice && proc.deviceID == targetID
             } else {
@@ -348,21 +421,30 @@ public struct ProcessTelemetryService: Sendable {
             }
         }
 
-        // If an active Xcode project is open and matches one of the running user apps on this target, show only the matching opened app(s)
+        // Strict privacy enforcement when an Xcode project is open or local Xcode DerivedData build names are provided:
+        // Only return apps that are actively being debugged by Xcode OR match the active Xcode project / local Xcode builds.
+        var allowedTokens: Set<String> = localXcodeAppNames ?? []
         if let projectName, !projectName.isEmpty {
             let token = projectName
                 .replacingOccurrences(of: "-ios", with: "", options: .caseInsensitive)
                 .replacingOccurrences(of: "_ios", with: "", options: .caseInsensitive)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if token.count >= 3 {
-                let matched = targetApps.filter {
-                    $0.name.localizedCaseInsensitiveContains(token) || token.localizedCaseInsensitiveContains($0.name)
-                }
-                if !matched.isEmpty {
-                    return matched
+                .lowercased()
+            if token.count >= 2 {
+                allowedTokens.insert(token)
+            }
+        }
+
+        if !allowedTokens.isEmpty {
+            return targetApps.filter { proc in
+                if proc.isBeingDebuggedByXcode { return true }
+                let lower = proc.name.lowercased()
+                return allowedTokens.contains { token in
+                    lower.contains(token) || token.contains(lower)
                 }
             }
         }
+
         return targetApps
     }
 
@@ -372,7 +454,10 @@ public struct ProcessTelemetryService: Sendable {
         "vysor", "preferences", "springboard", "shortcuts", "files",
         "appstore", "music", "podcasts", "weather", "maps", "mail",
         "notes", "reminders", "camera", "clock", "calculator", "compass",
-        "findmy", "health", "wallet", "stocks", "tips", "measure", "voicememos"
+        "findmy", "health", "wallet", "stocks", "tips", "measure", "voicememos",
+        "instagram", "tiktok", "shopee", "tokopedia", "gojek", "grab",
+        "youtube", "netflix", "spotify", "gmail", "chrome", "facebook",
+        "messenger", "line", "signal", "slack", "zoom", "teams"
     ]
 
     public static func parseDeveloperAppNames(from data: Data) -> Set<String> {
@@ -400,6 +485,23 @@ public struct ProcessTelemetryService: Sendable {
         return names
     }
 
+    /// Detects whether Xcode's `debugserver` is actively running on the physical iPhone.
+    public static func parseIsXcodeDebugServerActive(from data: Data) -> Bool {
+        guard
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let resultObj = json["result"] as? [String: Any],
+            let running = resultObj["runningProcesses"] as? [[String: Any]]
+        else { return false }
+
+        for entry in running {
+            guard let execStr = (entry["executable"] as? String)?.lowercased() else { continue }
+            if execStr.contains("debugserver") || execStr.contains("lldb") {
+                return true
+            }
+        }
+        return false
+    }
+
     public static func parsePhysicalDeviceProcesses(
         from data: Data,
         deviceID: String,
@@ -412,6 +514,9 @@ public struct ProcessTelemetryService: Sendable {
             let running = resultObj["runningProcesses"] as? [[String: Any]]
         else { return [] }
 
+        // Fail-closed privacy gate: if allowedDeveloperApps is provided (including empty set), require exact match in allowedDeveloperApps.
+        let strictDevSet = allowedDeveloperApps ?? []
+        let debugServerActive = parseIsXcodeDebugServerActive(from: data)
         var userApps: [SimulatorProcessInfo] = []
         var seen = Set<Int32>()
 
@@ -429,8 +534,9 @@ public struct ProcessTelemetryService: Sendable {
             let lowerName = decodedName.lowercased()
             guard !decodedName.isEmpty, !nonDeveloperAppBlocklist.contains(lowerName) else { continue }
 
-            if let allowedDeveloperApps {
-                guard allowedDeveloperApps.contains(lowerName) else { continue }
+            // Fail-closed: if `allowedDeveloperApps` was passed (even if empty), only apps explicitly marked `builtByDeveloper == true` pass!
+            if allowedDeveloperApps != nil {
+                guard strictDevSet.contains(lowerName) else { continue }
             }
 
             guard seen.insert(pid).inserted else { continue }
@@ -440,7 +546,9 @@ public struct ProcessTelemetryService: Sendable {
                     name: decodedName,
                     deviceID: deviceID,
                     deviceName: deviceName,
-                    isUserApp: true
+                    isUserApp: true,
+                    isBuiltByXcode: true,
+                    isBeingDebuggedByXcode: debugServerActive
                 )
             )
         }

@@ -467,6 +467,10 @@ final class SimulatorPresenter {
 
         let screenURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("xscope_live_screen_\(app.id).png")
+        defer {
+            // Privacy guarantee: always shred temporary screenshot file after in-memory decoding
+            try? FileManager.default.removeItem(at: screenURL)
+        }
         var capturedURL: URL?
 
         // 1. Capture live screen from either Physical iPhone (devicectl) or Booted Simulator (simctl)
@@ -505,23 +509,22 @@ final class SimulatorPresenter {
             return (decoded, extracted, croppedMap)
         }.value
 
-        // If Vision detected the iOS Home Screen (SpringBoard), clear Opened App so Home Screen is never shown as a running app!
+        // If Vision / Privacy Guard detected iOS Home Screen or a private non-Xcode app in the foreground, clear Opened App & shred state!
         if nodes.isEmpty {
             isTargetAtHomeScreen = true
             selectedRunningApp = nil
             componentNodes = []
             selectedNodeID = nil
             draftNode = nil
+            liveScreenImagePath = nil
             liveScreenCGImage = nil
             preCroppedTextures = [:]
-            router.statusMessage = "Device is on iOS Home Screen — open a developer app to inspect"
+            router.statusMessage = "Privacy Guard: No Xcode-debugged or Xcode-built app in foreground"
             return
         }
 
         isTargetAtHomeScreen = false
-        if let screenFileURL {
-            liveScreenImagePath = screenFileURL.path
-        }
+        liveScreenImagePath = nil
         if let cgImg {
             liveScreenCGImage = cgImg
         }
