@@ -18,6 +18,12 @@ enum UIRenderDimensionMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+struct InspectorTargetOption: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let isPhysicalDevice: Bool
+}
+
 // MARK: - Simulator VIPER
 protocol SimulatorInteractorProtocol: Sendable {
     func listSimulators() async throws -> [SimulatorDevice]
@@ -123,6 +129,13 @@ final class SimulatorPresenter {
     var workspaceTab: SimulatorWorkspaceTab = .uiInspector
     var renderMode: UIRenderDimensionMode = .render3D
     var runningApps: [SimulatorProcessInfo] = []
+    var selectedTargetID: String? {
+        didSet {
+            if oldValue != selectedTargetID {
+                syncTargetSelectionToRouterAndPickOpenedApp()
+            }
+        }
+    }
     var selectedRunningApp: SimulatorProcessInfo? {
         didSet {
             if oldValue?.id != selectedRunningApp?.id {
@@ -301,15 +314,67 @@ final class SimulatorPresenter {
         }
     }
 
+    var availableTargets: [InspectorTargetOption] {
+        let sims = router.bootedSimulators.map {
+            InspectorTargetOption(id: $0.id, title: "[SIM] \($0.name)", isPhysicalDevice: false)
+        }
+        let devs = router.activePhysicalDevices.map {
+            InspectorTargetOption(id: $0.id, title: "[DEVICE] \($0.name) (iOS \($0.osVersion))", isPhysicalDevice: true)
+        }
+        return sims + devs
+    }
+
+    var filteredRunningApps: [SimulatorProcessInfo] {
+        guard let targetID = selectedTargetID,
+              let target = availableTargets.first(where: { $0.id == targetID }) else {
+            return []
+        }
+        let projName = router.projectURL?.lastPathComponent
+        return ProcessTelemetryService.filterOpenedAppsForTarget(
+            runningApps,
+            targetID: target.id,
+            isPhysicalDevice: target.isPhysicalDevice,
+            projectName: projName
+        )
+    }
+
+    private func syncTargetSelectionToRouterAndPickOpenedApp() {
+        guard let targetID = selectedTargetID,
+              let target = availableTargets.first(where: { $0.id == targetID }) else {
+            selectedRunningApp = nil
+            componentNodes = []
+            selectedNodeID = nil
+            return
+        }
+        if target.isPhysicalDevice {
+            router.selectPhysicalDevice(target.id)
+        } else {
+            router.selectSimulator(target.id)
+        }
+        let opened = filteredRunningApps
+        if let current = selectedRunningApp, opened.contains(where: { $0.id == current.id }) {
+            return
+        }
+        selectedRunningApp = opened.first
+    }
+
     func refreshRunningAppsAndHierarchy() async {
         await refreshDevices()
         let apps = await interactor.listRunningApps(physicalDevices: router.activePhysicalDevices)
         runningApps = apps
-        if let current = selectedRunningApp, !apps.contains(where: { $0.id == current.id }) {
+        if let targetID = selectedTargetID, !availableTargets.contains(where: { $0.id == targetID }) {
+            selectedTargetID = nil
+        }
+        guard selectedTargetID != nil else {
+            selectedRunningApp = nil
+            return
+        }
+        let opened = filteredRunningApps
+        if let current = selectedRunningApp, !opened.contains(where: { $0.id == current.id }) {
             selectedRunningApp = nil
         }
         if selectedRunningApp == nil {
-            selectedRunningApp = apps.first
+            selectedRunningApp = opened.first
         } else {
             await captureHierarchyForSelectedApp()
         }

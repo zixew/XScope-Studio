@@ -106,9 +106,30 @@ struct SimulatorControlsView: View {
                 FlowLayout(spacing: 12, verticalSpacing: 10) {
                     HStack(spacing: 6) {
                         Circle()
+                            .fill(presenter.selectedTargetID != nil ? CompanionTheme.mint : CompanionTheme.amber)
+                            .frame(width: 7, height: 7)
+                        Text("1. Target:")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(CompanionTheme.textSecondary)
+                            .preventSquish()
+                    }
+                    .fixedSize()
+
+                    Picker("", selection: $presenter.selectedTargetID) {
+                        Text("Select Device / Simulator…").tag(String?.none)
+                        ForEach(presenter.availableTargets) { target in
+                            Text(target.title).tag(String?.some(target.id))
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 195)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                    HStack(spacing: 6) {
+                        Circle()
                             .fill(presenter.selectedRunningApp != nil ? CompanionTheme.mint : CompanionTheme.amber)
                             .frame(width: 7, height: 7)
-                        Text("Running App:")
+                        Text("2. Opened App:")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(CompanionTheme.textSecondary)
                             .preventSquish()
@@ -116,13 +137,15 @@ struct SimulatorControlsView: View {
                     .fixedSize()
 
                     Picker("", selection: $presenter.selectedRunningApp) {
-                        Text(AppStrings.Performance.selectSimulatorApp).tag(SimulatorProcessInfo?.none)
-                        ForEach(presenter.runningApps) { app in
-                            Text(app.displayLabel).tag(SimulatorProcessInfo?.some(app))
+                        Text(presenter.selectedTargetID == nil ? "Select Target First…" : "Select Opened App…")
+                            .tag(SimulatorProcessInfo?.none)
+                        ForEach(presenter.filteredRunningApps) { app in
+                            Text("\(app.name) (PID \(app.id))").tag(SimulatorProcessInfo?.some(app))
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 200)
+                    .frame(width: 185)
+                    .disabled(presenter.selectedTargetID == nil)
                     .fixedSize(horizontal: true, vertical: false)
 
                     HStack(spacing: 2) {

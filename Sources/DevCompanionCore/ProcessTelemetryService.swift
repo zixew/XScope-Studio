@@ -5,6 +5,8 @@ public struct SimulatorProcessInfo: Identifiable, Sendable, Equatable, Hashable 
     public let name: String
     public let deviceID: String?
     public let deviceName: String?
+    public let simulatorUDID: String?
+    public let isUserApp: Bool
 
     public var isPhysicalDevice: Bool { deviceID != nil }
 
@@ -15,11 +17,20 @@ public struct SimulatorProcessInfo: Identifiable, Sendable, Equatable, Hashable 
         return "[SIM] \(name) (\(id))"
     }
 
-    public init(id: Int32, name: String, deviceID: String? = nil, deviceName: String? = nil) {
+    public init(
+        id: Int32,
+        name: String,
+        deviceID: String? = nil,
+        deviceName: String? = nil,
+        simulatorUDID: String? = nil,
+        isUserApp: Bool = true
+    ) {
         self.id = id
         self.name = name
         self.deviceID = deviceID
         self.deviceName = deviceName
+        self.simulatorUDID = simulatorUDID
+        self.isUserApp = isUserApp
     }
 }
 
@@ -235,14 +246,70 @@ public struct ProcessTelemetryService: Sendable {
             let appName = URL(fileURLWithPath: path).lastPathComponent
             guard !appName.isEmpty else { continue }
 
-            let info = SimulatorProcessInfo(id: pid, name: appName)
-            if path.contains("Containers/Bundle/Application") {
+            let isExtensionOrHelper = path.contains(".appex/") || path.contains(".xpc/") || path.contains("/PlugIns/") || path.contains("/Watch/")
+            guard !isExtensionOrHelper else { continue }
+
+            let simUDID = extractSimulatorUDID(from: path)
+            let isUser = path.contains("Containers/Bundle/Application")
+            let info = SimulatorProcessInfo(
+                id: pid,
+                name: appName,
+                simulatorUDID: simUDID,
+                isUserApp: isUser
+            )
+            if isUser {
                 userApps.append(info)
             } else {
                 systemApps.append(info)
             }
         }
         return userApps.sorted { $0.name < $1.name } + systemApps.sorted { $0.name < $1.name }
+    }
+
+    private static func extractSimulatorUDID(from path: String) -> String? {
+        guard let range = path.range(of: "CoreSimulator/Devices/") else { return nil }
+        let rest = path[range.upperBound...]
+        let seg = rest.prefix { $0 != "/" }
+        return seg.isEmpty ? nil : String(seg)
+    }
+
+    public static func filterOpenedAppsForTarget(
+        _ processes: [SimulatorProcessInfo],
+        targetID: String?,
+        isPhysicalDevice: Bool,
+        projectName: String? = nil
+    ) -> [SimulatorProcessInfo] {
+        guard let targetID, !targetID.isEmpty else { return [] }
+
+        let targetApps = processes.filter { proc in
+            guard proc.isUserApp else { return false }
+            if isPhysicalDevice {
+                return proc.isPhysicalDevice && proc.deviceID == targetID
+            } else {
+                guard !proc.isPhysicalDevice else { return false }
+                if let udid = proc.simulatorUDID, targetID != "booted" {
+                    return udid.caseInsensitiveCompare(targetID) == .orderedSame
+                }
+                return true
+            }
+        }
+
+        // If an active Xcode project is open and matches one of the running user apps on this target, show only the matching opened app(s)
+        if let projectName, !projectName.isEmpty {
+            let token = projectName
+                .replacingOccurrences(of: "-ios", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "_ios", with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if token.count >= 3 {
+                let matched = targetApps.filter {
+                    $0.name.localizedCaseInsensitiveContains(token) || token.localizedCaseInsensitiveContains($0.name)
+                }
+                if !matched.isEmpty {
+                    return matched
+                }
+            }
+        }
+        return targetApps
     }
 
     public static func parsePhysicalDeviceProcesses(
@@ -263,6 +330,8 @@ public struct ProcessTelemetryService: Sendable {
             guard let pidInt = entry["processIdentifier"] as? Int else { continue }
             let pid = Int32(pidInt)
             guard let execStr = entry["executable"] as? String else { continue }
+            let isExtensionOrHelper = execStr.contains(".appex/") || execStr.contains(".xpc/") || execStr.contains("/PlugIns/") || execStr.contains("/Watch/")
+            guard !isExtensionOrHelper else { continue }
             guard execStr.contains(".app/") && (execStr.contains("/Containers/Bundle/Application/") || execStr.contains("/var/containers/Bundle/Application/")) else {
                 continue
             }
@@ -273,7 +342,8 @@ public struct ProcessTelemetryService: Sendable {
                     id: pid,
                     name: appName,
                     deviceID: deviceID,
-                    deviceName: deviceName
+                    deviceName: deviceName,
+                    isUserApp: true
                 )
             )
         }

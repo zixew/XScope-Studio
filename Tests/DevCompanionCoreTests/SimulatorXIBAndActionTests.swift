@@ -94,4 +94,31 @@ struct SimulatorXIBAndActionTests {
         #expect(tree[2].id == "cell" && tree[2].depth == 2 && tree[2].parentID == "tbl")
         #expect(tree[3].id == "lbl" && tree[3].depth == 3 && tree[3].parentID == "cell")
     }
+
+    @Test("ProcessTelemetryService 2-step filter requires target device first and shows only opened user app")
+    func filtersOpenedAppPerTargetDevice() {
+        let psOut = """
+          501 /Users/dev/Library/Developer/CoreSimulator/Devices/SIM-111/data/Containers/Bundle/Application/A1/BRImoDev.app/BRImoDev
+          502 /Users/dev/Library/Developer/CoreSimulator/Devices/SIM-111/data/Containers/Bundle/Application/A1/BRImoDev.app/PlugIns/Widget.appex/Widget
+          503 /Library/Developer/CoreSimulator/Volumes/iOS_21A/RuntimeRoot/Applications/MobileSafari.app/MobileSafari
+          601 /Users/dev/Library/Developer/CoreSimulator/Devices/SIM-222/data/Containers/Bundle/Application/B2/OtherSimApp.app/OtherSimApp
+        """
+        var allProcs = ProcessTelemetryService.parseSimulatorProcesses(from: psOut)
+        allProcs.append(SimulatorProcessInfo(id: 901, name: "BRImoDev", deviceID: "IPHONE-1", deviceName: "iPhone 16", isUserApp: true))
+
+        // Before selecting any target device/simulator -> empty
+        let noneSelected = ProcessTelemetryService.filterOpenedAppsForTarget(allProcs, targetID: nil, isPhysicalDevice: false)
+        #expect(noneSelected.isEmpty)
+
+        // Step 1: Select Simulator SIM-111 -> only BRImoDev (excludes Widget.appex, MobileSafari system app, and SIM-222 / iPhone apps)
+        let sim111Apps = ProcessTelemetryService.filterOpenedAppsForTarget(allProcs, targetID: "SIM-111", isPhysicalDevice: false, projectName: "Brimo-ios")
+        #expect(sim111Apps.count == 1)
+        #expect(sim111Apps.first?.id == 501)
+        #expect(sim111Apps.first?.name == "BRImoDev")
+
+        // Step 1: Select Physical Device IPHONE-1 -> only PID 901 on IPHONE-1
+        let deviceApps = ProcessTelemetryService.filterOpenedAppsForTarget(allProcs, targetID: "IPHONE-1", isPhysicalDevice: true)
+        #expect(deviceApps.count == 1)
+        #expect(deviceApps.first?.id == 901)
+    }
 }
