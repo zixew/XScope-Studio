@@ -4,6 +4,18 @@
 
 Native macOS developer companion for Xcode & iOS engineering — inspect Simulators in 2D/3D, diagnose Crashlytics & hangs, run static Swift/UIKit/SwiftUI code reviews, and monitor unit tests in one workspace.
 
+![XScope Studio Hero Preview](docs/assets/hero-preview.png)
+
+## Preview
+
+| Leaks, Hangs & Crashlytics | Static Code Reviewer |
+| :---: | :---: |
+| ![Leaks, Hangs & Crashlytics](docs/assets/preview-leaks-crashlytics.png) | ![Static Code Reviewer](docs/assets/preview-code-review.png) |
+
+| 2D / 3D Live UI Inspector |
+| :---: |
+| ![2D / 3D Live UI Inspector](docs/assets/preview-simulator-3d.png) |
+
 ## Features
 
 - **Overview**: Real-time workspace snapshot, active Simulator & physical iPhone status, and quick diagnostics.
