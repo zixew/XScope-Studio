@@ -68,19 +68,27 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
     public enum Kind: String, Sendable, CaseIterable, Codable {
         case window = "Window / Root"
         case navigationBar = "Navigation / Header"
+        case tabBar = "Tab Bar"
+        case tableView = "UITableView / List"
+        case collectionView = "UICollectionView / Grid"
+        case scrollView = "UIScrollView / Scroll"
+        case stackView = "UIStackView / Stack"
+        case cell = "Table / Collection Cell"
         case banner = "Hero / Image Banner"
+        case imageView = "UIImageView / Image"
         case cardContainer = "Section / Card"
         case actionGrid = "Menu / Grid"
         case button = "Button / CTA"
         case label = "Text / Label"
         case inputField = "Input / Field"
+        case control = "Control / Toggle"
 
         public var defaultZLayer: Int {
             switch self {
             case .window: return 0
-            case .cardContainer, .banner: return 1
-            case .navigationBar, .actionGrid: return 2
-            case .button, .label, .inputField: return 3
+            case .scrollView, .tableView, .collectionView, .cardContainer, .banner: return 1
+            case .stackView, .cell, .navigationBar, .tabBar, .actionGrid: return 2
+            case .button, .label, .inputField, .imageView, .control: return 3
             }
         }
 
@@ -88,17 +96,29 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
             switch self {
             case .window: return "macwindow"
             case .navigationBar: return "menubar.rectangle"
+            case .tabBar: return "dock.rectangle"
+            case .tableView: return "list.bullet.rectangle"
+            case .collectionView: return "square.grid.3x3"
+            case .scrollView: return "scroll"
+            case .stackView: return "square.stack.3d.up"
+            case .cell: return "rectangle.split.3x1"
             case .banner: return "photo"
+            case .imageView: return "photo.artframe"
             case .cardContainer: return "rectangle.on.rectangle"
             case .actionGrid: return "square.grid.2x2"
             case .button: return "hand.tap"
             case .label: return "textformat"
             case .inputField: return "character.cursor.ibeam"
+            case .control: return "slider.horizontal.3"
             }
         }
     }
 
     public let id: String
+    public var parentID: String?
+    public var depth: Int
+    public var childCount: Int
+    public var className: String
     public var name: String
     public var kind: Kind
     public var zLayer: Int
@@ -130,6 +150,10 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
 
     public init(
         id: String? = nil,
+        parentID: String? = nil,
+        depth: Int = 0,
+        childCount: Int = 0,
+        className: String? = nil,
         name: String,
         kind: Kind,
         zLayer: Int? = nil,
@@ -158,6 +182,10 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
         isEdited: Bool = false
     ) {
         self.id = id ?? "\(fileName):\(lineNumber):\(name)"
+        self.parentID = parentID
+        self.depth = depth
+        self.childCount = childCount
+        self.className = className ?? kind.rawValue
         self.name = name
         self.kind = kind
         self.zLayer = zLayer ?? kind.defaultZLayer
@@ -257,7 +285,7 @@ public struct UIHierarchyInspectorService: Sendable {
         if nodes.isEmpty {
             nodes = Self.defaultHierarchy(for: process.name)
         }
-        return nodes
+        return Self.buildHierarchyTree(from: nodes)
     }
 
     private func extractLiveNodesFromScreenshot(
@@ -433,7 +461,104 @@ public struct UIHierarchyInspectorService: Sendable {
             )
         }
 
-        return nodes
+        // Include unclaimed UIKit/SwiftUI structural containers & controls (UITableView, UICollectionView, UIStackView, UIScrollView, Cell, etc.)
+        for (symIdx, sym) in unusedSwiftSymbols.prefix(18).enumerated() {
+            let rowY = min(0.85, 0.12 + Double(symIdx % 7) * 0.11)
+            let isContainer = [.tableView, .collectionView, .scrollView, .stackView, .cardContainer].contains(sym.kind)
+            nodes.append(
+                UIComponentNode(
+                    id: "swift-sym-\(symIdx)-\(sym.name)",
+                    className: sym.kind.rawValue,
+                    name: sym.name,
+                    kind: sym.kind,
+                    zLayer: sym.kind.defaultZLayer,
+                    normalizedX: isContainer ? 0.04 : 0.08,
+                    normalizedY: isContainer ? 0.12 : rowY,
+                    normalizedWidth: isContainer ? 0.92 : 0.84,
+                    normalizedHeight: isContainer ? 0.78 : 0.08,
+                    fileName: sym.fileName,
+                    filePath: sym.filePath,
+                    lineNumber: sym.lineNumber,
+                    codeSnippet: sym.snippet,
+                    displayText: sym.name,
+                    accentHex: isContainer ? "#6366F1" : "#38BDF8",
+                    cornerRadius: isContainer ? 12 : 8,
+                    fontSize: 12
+                )
+            )
+        }
+
+        return Self.buildHierarchyTree(from: nodes)
+    }
+
+    /// Assembles a root-to-leaf parent-child tree from flat nodes using containment geometry and zLayer order.
+    public static func buildHierarchyTree(from flatNodes: [UIComponentNode]) -> [UIComponentNode] {
+        guard !flatNodes.isEmpty else { return [] }
+        var nodes = flatNodes
+        let rootIdx = nodes.firstIndex(where: { $0.kind == .window }) ?? 0
+        let rootID = nodes[rootIdx].id
+
+        func area(_ n: UIComponentNode) -> Double {
+            max(0.0001, n.normalizedWidth * n.normalizedHeight)
+        }
+
+        func contains(_ outer: UIComponentNode, _ inner: UIComponentNode) -> Bool {
+            let tol = 0.03
+            return inner.normalizedX >= outer.normalizedX - tol
+                && inner.normalizedY >= outer.normalizedY - tol
+                && (inner.normalizedX + inner.normalizedWidth) <= (outer.normalizedX + outer.normalizedWidth + tol)
+                && (inner.normalizedY + inner.normalizedHeight) <= (outer.normalizedY + outer.normalizedHeight + tol)
+        }
+
+        for i in nodes.indices {
+            if i == rootIdx {
+                nodes[i].parentID = nil
+                continue
+            }
+            if let explicitParent = nodes[i].parentID, nodes.contains(where: { $0.id == explicitParent }) {
+                continue
+            }
+            let child = nodes[i]
+            let candidates = nodes.indices.filter { pIdx in
+                guard pIdx != i else { return false }
+                let parent = nodes[pIdx]
+                if parent.zLayer > child.zLayer { return false }
+                if area(parent) <= area(child) * 1.05 { return false }
+                return contains(parent, child)
+            }
+            if let bestParentIdx = candidates.min(by: { area(nodes[$0]) < area(nodes[$1]) }) {
+                nodes[i].parentID = nodes[bestParentIdx].id
+            } else {
+                nodes[i].parentID = rootID
+            }
+        }
+
+        var childrenMap: [String: [Int]] = [:]
+        for i in nodes.indices {
+            if let pid = nodes[i].parentID {
+                childrenMap[pid, default: []].append(i)
+            }
+        }
+
+        var ordered: [UIComponentNode] = []
+        var visited: Set<String> = []
+        func dfs(_ idx: Int, depth: Int) {
+            let id = nodes[idx].id
+            guard visited.insert(id).inserted else { return }
+            var node = nodes[idx]
+            node.depth = depth
+            let childIndices = childrenMap[id] ?? []
+            node.childCount = childIndices.count
+            ordered.append(node)
+            for cIdx in childIndices {
+                dfs(cIdx, depth: depth + 1)
+            }
+        }
+        dfs(rootIdx, depth: 0)
+        for i in nodes.indices where !visited.contains(nodes[i].id) {
+            dfs(i, depth: 1)
+        }
+        return ordered
     }
 
     private struct ScreenSourceMatch {
@@ -685,6 +810,34 @@ public struct UIHierarchyInspectorService: Sendable {
     }
 
     private static func classifyComponentLine(_ line: String) -> (name: String, kind: UIComponentNode.Kind)? {
+        if line.contains("UITableViewCell") || line.contains("UICollectionViewCell") {
+            let name = extractIdentifier(from: line) ?? "TableOrCollectionCell"
+            return (name, .cell)
+        }
+        if line.contains("UITableView") || line.contains("List(") || line.contains("List {") {
+            let name = extractIdentifier(from: line) ?? "TableView"
+            return (name, .tableView)
+        }
+        if line.contains("UICollectionView") || line.contains("LazyVGrid") || line.contains("LazyHGrid") {
+            let name = extractIdentifier(from: line) ?? "CollectionView"
+            return (name, .collectionView)
+        }
+        if line.contains("UIScrollView") || line.contains("ScrollView") {
+            let name = extractIdentifier(from: line) ?? "ScrollView"
+            return (name, .scrollView)
+        }
+        if line.contains("UIStackView") || line.contains("VStack") || line.contains("HStack") || line.contains("ZStack") {
+            let name = extractIdentifier(from: line) ?? "StackView"
+            return (name, .stackView)
+        }
+        if line.contains("UITabBar") || line.contains("TabView") {
+            let name = extractIdentifier(from: line) ?? "TabBar"
+            return (name, .tabBar)
+        }
+        if line.contains("UISwitch") || line.contains("UISlider") || line.contains("UISegmentedControl") || line.contains("Toggle(") || line.contains("Picker(") {
+            let name = extractIdentifier(from: line) ?? "Control"
+            return (name, .control)
+        }
         if line.contains("UIButton") || line.contains("Button(") || line.localizedCaseInsensitiveContains("loginButton") || line.localizedCaseInsensitiveContains("submitButton") {
             let name = extractIdentifier(from: line) ?? "ActionButton"
             return (name, .button)
@@ -694,12 +847,8 @@ public struct UIHierarchyInspectorService: Sendable {
             return (name, .navigationBar)
         }
         if line.contains("UIImageView") || line.contains("Image(") || line.localizedCaseInsensitiveContains("banner") || line.localizedCaseInsensitiveContains("avatar") {
-            let name = extractIdentifier(from: line) ?? "HeroBannerImage"
-            return (name, .banner)
-        }
-        if line.contains("UICollectionView") || line.contains("LazyVGrid") || line.contains("UIStackView") || line.localizedCaseInsensitiveContains("fastMenu") {
-            let name = extractIdentifier(from: line) ?? "FastMenuGrid"
-            return (name, .actionGrid)
+            let name = extractIdentifier(from: line) ?? "ImageView"
+            return (name, .imageView)
         }
         if line.contains("UITextField") || line.contains("TextField(") || line.contains("SecureField(") {
             let name = extractIdentifier(from: line) ?? "InputTextField"

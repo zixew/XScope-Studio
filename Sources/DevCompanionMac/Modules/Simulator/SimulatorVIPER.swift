@@ -148,6 +148,8 @@ final class SimulatorPresenter {
     var draftSourceSlice: String = ""
     var isDebugBridgeConnected: Bool = false
     var lastActionStatus: String = ""
+    var collapsedNodeIDs: Set<String> = []
+    var hierarchySearchQuery: String = ""
     var liveScreenImagePath: String?
     var liveScreenCGImage: CGImage?
     var preCroppedTextures: [String: CGImage] = [:]
@@ -347,7 +349,10 @@ final class SimulatorPresenter {
             }
         }
 
-        // 2. Decode CGImage + run Vision OCR/Rectangle live UI extraction + pre-crop textures off the main thread
+        // 2. Try Live Debug Bridge GET /hierarchy first; fallback to Vision OCR/Rectangle + Swift AST
+        let bridgeNodes = await bridgeService.fetchHierarchy()
+        isDebugBridgeConnected = (bridgeNodes != nil)
+
         let interactorRef = interactor
         let projURL = router.projectURL
         let screenFileURL = capturedURL
@@ -357,7 +362,7 @@ final class SimulatorPresenter {
                let src = CGImageSourceCreateWithURL(screenFileURL as CFURL, nil) {
                 decoded = CGImageSourceCreateImageAtIndex(src, 0, nil)
             }
-            let extracted = interactorRef.buildUIHierarchy(for: app, screenshotURL: screenFileURL, in: projURL)
+            let extracted = bridgeNodes ?? interactorRef.buildUIHierarchy(for: app, screenshotURL: screenFileURL, in: projURL)
             let croppedMap = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: extracted) } ?? [:]
             return (decoded, extracted, croppedMap)
         }.value
@@ -378,6 +383,44 @@ final class SimulatorPresenter {
 
     func selectComponent(_ node: UIComponentNode) {
         selectedNodeID = node.id
+    }
+
+    var visibleHierarchyNodes: [UIComponentNode] {
+        let q = hierarchySearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !q.isEmpty {
+            return componentNodes.filter {
+                $0.name.lowercased().contains(q)
+                    || $0.className.lowercased().contains(q)
+                    || $0.kind.rawValue.lowercased().contains(q)
+                    || $0.fileName.lowercased().contains(q)
+            }
+        }
+        var hiddenByAncestor: Set<String> = []
+        var visible: [UIComponentNode] = []
+        for node in componentNodes {
+            if let pid = node.parentID, (collapsedNodeIDs.contains(pid) || hiddenByAncestor.contains(pid)) {
+                hiddenByAncestor.insert(node.id)
+                continue
+            }
+            visible.append(node)
+        }
+        return visible
+    }
+
+    func toggleNodeCollapse(_ id: String) {
+        if collapsedNodeIDs.contains(id) {
+            collapsedNodeIDs.remove(id)
+        } else {
+            collapsedNodeIDs.insert(id)
+        }
+    }
+
+    func expandAllNodes() {
+        collapsedNodeIDs.removeAll()
+    }
+
+    func collapseToContainers() {
+        collapsedNodeIDs = Set(componentNodes.filter { $0.depth >= 1 && $0.childCount > 0 }.map(\.id))
     }
 
     func reset3DCamera() {

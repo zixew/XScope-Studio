@@ -68,13 +68,30 @@ struct SimulatorXIBAndActionTests {
         #expect(actions.contains(where: { $0.kind == .swiftUIButton && $0.name == "Continue" }))
     }
 
-    @Test("XScopeDebugBridgeService generates #if DEBUG bridge with invoke and mutate endpoints")
+    @Test("XScopeDebugBridgeService generates #if DEBUG bridge with invoke, mutate, and hierarchy endpoints")
     func generatesDebugBridge() {
         let code = XScopeDebugBridgeService.generateBridgeSwiftSource(port: 49876)
         #expect(code.contains("#if DEBUG"))
         #expect(code.contains("final class XScopeDebugBridge"))
+        #expect(code.contains("GET /hierarchy"))
         #expect(code.contains("POST /invoke"))
         #expect(code.contains("POST /mutate"))
         #expect(code.contains("#endif"))
+    }
+
+    @Test("UIHierarchyInspectorService builds root-to-leaf tree including UITableView, UICollectionView, UIStackView, and Cells")
+    func buildsFullHierarchyTree() {
+        let nodes = [
+            UIComponentNode(id: "win", name: "AppWindow", kind: .window, zLayer: 0, normalizedX: 0, normalizedY: 0, normalizedWidth: 1, normalizedHeight: 1, fileName: "App.swift", lineNumber: 1, codeSnippet: "UIWindow()"),
+            UIComponentNode(id: "tbl", name: "mainTableView", kind: .tableView, zLayer: 1, normalizedX: 0.05, normalizedY: 0.1, normalizedWidth: 0.9, normalizedHeight: 0.8, fileName: "HomeVC.swift", lineNumber: 12, codeSnippet: "let mainTableView = UITableView()"),
+            UIComponentNode(id: "cell", name: "LoanRowCell", kind: .cell, zLayer: 2, normalizedX: 0.08, normalizedY: 0.15, normalizedWidth: 0.84, normalizedHeight: 0.12, fileName: "LoanRowCell.swift", lineNumber: 8, codeSnippet: "class LoanRowCell: UITableViewCell"),
+            UIComponentNode(id: "lbl", name: "amountLabel", kind: .label, zLayer: 3, normalizedX: 0.1, normalizedY: 0.17, normalizedWidth: 0.4, normalizedHeight: 0.05, fileName: "LoanRowCell.swift", lineNumber: 14, codeSnippet: "let amountLabel = UILabel()")
+        ]
+        let tree = UIHierarchyInspectorService.buildHierarchyTree(from: nodes)
+        #expect(tree.count == 4)
+        #expect(tree[0].id == "win" && tree[0].depth == 0 && tree[0].parentID == nil)
+        #expect(tree[1].id == "tbl" && tree[1].depth == 1 && tree[1].parentID == "win")
+        #expect(tree[2].id == "cell" && tree[2].depth == 2 && tree[2].parentID == "tbl")
+        #expect(tree[3].id == "lbl" && tree[3].depth == 3 && tree[3].parentID == "cell")
     }
 }

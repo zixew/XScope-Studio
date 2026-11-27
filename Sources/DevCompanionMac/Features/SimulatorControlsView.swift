@@ -233,7 +233,7 @@ struct SimulatorControlsView: View {
             } else {
                 // 3-Column Xcode View Debugger Stage
                 HStack(alignment: .top, spacing: 12) {
-                    // Left Column: Z-Layer & Component Tree
+                    // Left Column: Xcode-Style Root-to-Leaf View Hierarchy Tree
                     GlassCard {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -241,62 +241,107 @@ struct SimulatorControlsView: View {
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(CompanionTheme.textPrimary)
                                 Spacer()
-                                Text("\(presenter.componentNodes.count) nodes")
+                                Button {
+                                    presenter.expandAllNodes()
+                                } label: {
+                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                        .font(.system(size: 9))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Expand All")
+                                Button {
+                                    presenter.collapseToContainers()
+                                } label: {
+                                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                        .font(.system(size: 9))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Collapse Containers")
+                                Text("\(presenter.visibleHierarchyNodes.count)/\(presenter.componentNodes.count)")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(CompanionTheme.textMuted)
                             }
 
-                            RecycledVirtualList(items: presenter.componentNodes, rowSpacing: 5) { node in
-                                let isSelected = presenter.selectedNode?.id == node.id
-                                Button {
-                                    withAnimation(.snappy) {
-                                        presenter.selectComponent(node)
-                                    }
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Text("Z\(node.zLayer)")
-                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 1.5)
-                                            .background(Color(hex: node.accentHex).opacity(0.22))
-                                            .foregroundStyle(Color(hex: node.accentHex))
-                                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                                            .padding(.leading, CGFloat(node.zLayer) * 8)
-                                            .preventSquish()
-
-                                        Image(systemName: node.kind.iconName)
-                                            .font(.system(size: 10))
-                                            .foregroundStyle(isSelected ? CompanionTheme.accent : CompanionTheme.textSecondary)
-
-                                        VStack(alignment: .leading, spacing: 1) {
-                                            Text(node.name)
-                                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                                                .foregroundStyle(CompanionTheme.textPrimary)
-                                                .lineLimit(1)
-                                            Text(node.locationLabel)
-                                                .font(.system(size: 9, design: .monospaced))
-                                                .foregroundStyle(CompanionTheme.textSecondary)
-                                                .lineLimit(1)
-                                        }
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(isSelected ? CompanionTheme.glassHigh : CompanionTheme.glassLow)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .stroke(isSelected ? CompanionTheme.accent.opacity(0.75) : .clear, lineWidth: 1)
-                                            )
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                            HStack(spacing: 6) {
+                                Image(systemName: AppConstants.Icons.magnifyingGlass)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(CompanionTheme.textMuted)
+                                TextField("Filter UITableView, Cell, UILabel…", text: $presenter.hierarchySearchQuery)
+                                    .textFieldStyle(.plain)
+                                    .font(.system(size: 10.5))
                             }
-                            .frame(minHeight: 430, maxHeight: 500)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 5)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+
+                            RecycledVirtualList(items: presenter.visibleHierarchyNodes, rowSpacing: 4) { node in
+                                let isSelected = presenter.selectedNode?.id == node.id
+                                let isCollapsed = presenter.collapsedNodeIDs.contains(node.id)
+                                HStack(spacing: 5) {
+                                    Spacer()
+                                        .frame(width: CGFloat(min(6, node.depth)) * 10)
+
+                                    if node.childCount > 0 {
+                                        Button {
+                                            presenter.toggleNodeCollapse(node.id)
+                                        } label: {
+                                            Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                                                .font(.system(size: 8.5, weight: .bold))
+                                                .foregroundStyle(CompanionTheme.textMuted)
+                                                .frame(width: 12, height: 12)
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else {
+                                        Spacer().frame(width: 12)
+                                    }
+
+                                    Button {
+                                        withAnimation(.snappy) {
+                                            presenter.selectComponent(node)
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: node.kind.iconName)
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(isSelected ? CompanionTheme.accent : Color(hex: node.accentHex))
+
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                HStack(spacing: 4) {
+                                                    Text(node.name)
+                                                        .font(.system(size: 10.5, weight: isSelected ? .bold : .medium))
+                                                        .foregroundStyle(CompanionTheme.textPrimary)
+                                                        .lineLimit(1)
+                                                    if node.childCount > 0 {
+                                                        Text("(\(node.childCount))")
+                                                            .font(.system(size: 8.5, design: .monospaced))
+                                                            .foregroundStyle(CompanionTheme.textMuted)
+                                                    }
+                                                }
+                                                Text("\(node.className) • \(node.locationLabel)")
+                                                    .font(.system(size: 8.5, design: .monospaced))
+                                                    .foregroundStyle(CompanionTheme.textSecondary)
+                                                    .lineLimit(1)
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 5)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(isSelected ? CompanionTheme.glassHigh : CompanionTheme.glassLow)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(isSelected ? CompanionTheme.accent.opacity(0.75) : .clear, lineWidth: 1)
+                                        )
+                                )
+                            }
+                            .frame(minHeight: 420, maxHeight: 490)
                         }
                     }
-                    .frame(minWidth: 190, idealWidth: 225, maxWidth: 250)
+                    .frame(minWidth: 230, idealWidth: 265, maxWidth: 295)
 
                     // Center Column: Interactive 2D / 3D Exploded Layer Stage
                     GlassCard {

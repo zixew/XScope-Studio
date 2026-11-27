@@ -59,6 +59,66 @@ public struct XScopeDebugBridgeService: Sendable {
         }
     }
 
+    public func fetchHierarchy(port: UInt16 = defaultPort) async -> [UIComponentNode]? {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/hierarchy") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 1.2
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard (resp as? HTTPURLResponse)?.statusCode == 200,
+                  let rawItems = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return nil
+            }
+            let nodes: [UIComponentNode] = rawItems.enumerated().map { idx, item in
+                let cls = (item["className"] as? String) ?? "UIView"
+                let name = (item["name"] as? String) ?? cls
+                let kind = Self.kind(forClassName: cls)
+                return UIComponentNode(
+                    id: (item["id"] as? String) ?? "bridge-\(idx)",
+                    parentID: item["parentID"] as? String,
+                    depth: (item["depth"] as? Int) ?? 0,
+                    childCount: (item["childCount"] as? Int) ?? 0,
+                    className: cls,
+                    name: name,
+                    kind: kind,
+                    zLayer: min(3, (item["depth"] as? Int) ?? kind.defaultZLayer),
+                    normalizedX: (item["normalizedX"] as? Double) ?? 0,
+                    normalizedY: (item["normalizedY"] as? Double) ?? 0,
+                    normalizedWidth: (item["normalizedWidth"] as? Double) ?? 1,
+                    normalizedHeight: (item["normalizedHeight"] as? Double) ?? 1,
+                    fileName: "LiveBridge.swift",
+                    lineNumber: 1,
+                    codeSnippet: "// Live \(cls) (\(name))",
+                    displayText: (item["displayText"] as? String) ?? name,
+                    cornerRadius: (item["cornerRadius"] as? Double) ?? 0,
+                    opacity: (item["opacity"] as? Double) ?? 1.0,
+                    isHidden: (item["isHidden"] as? Bool) ?? false
+                )
+            }
+            return UIHierarchyInspectorService.buildHierarchyTree(from: nodes)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func kind(forClassName cls: String) -> UIComponentNode.Kind {
+        let lower = cls.lowercased()
+        if lower.contains("window") { return .window }
+        if lower.contains("tableviewcell") || lower.contains("collectionviewcell") { return .cell }
+        if lower.contains("tableview") { return .tableView }
+        if lower.contains("collectionview") { return .collectionView }
+        if lower.contains("scrollview") { return .scrollView }
+        if lower.contains("stackview") { return .stackView }
+        if lower.contains("navigationbar") { return .navigationBar }
+        if lower.contains("tabbar") { return .tabBar }
+        if lower.contains("imageview") { return .imageView }
+        if lower.contains("button") { return .button }
+        if lower.contains("label") { return .label }
+        if lower.contains("textfield") || lower.contains("textview") { return .inputField }
+        if lower.contains("switch") || lower.contains("slider") || lower.contains("segmented") { return .control }
+        return .cardContainer
+    }
+
     public func sendMutation(node: UIComponentNode, port: UInt16 = defaultPort) async -> Bool {
         guard let url = URL(string: "http://127.0.0.1:\(port)/mutate"),
               let body = try? JSONEncoder().encode(DebugBridgeMutationPayload(from: node)) else {
@@ -140,6 +200,11 @@ public struct XScopeDebugBridgeService: Sendable {
                     respond("200 OK", body: "ok", on: conn)
                     return
                 }
+                if header.contains("GET /hierarchy") {
+                    let dump = dumpWindowHierarchyJSON()
+                    respond("200 OK", body: dump, on: conn)
+                    return
+                }
                 if header.contains("POST /invoke"),
                    let json = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any],
                    let selName = json["selectorName"] as? String {
@@ -200,6 +265,47 @@ public struct XScopeDebugBridgeService: Sendable {
                     .compactMap { $0 as? UIWindowScene }
                     .flatMap { $0.windows }
                     .first(where: { $0.isKeyWindow })?.rootViewController
+            }
+
+            private func dumpWindowHierarchyJSON() -> String {
+                guard let window = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .flatMap({ $0.windows })
+                    .first(where: { $0.isKeyWindow }) else { return "[]" }
+                let winBounds = window.bounds.size
+                let winW = max(1, winBounds.width)
+                let winH = max(1, winBounds.height)
+                var items: [[String: Any]] = []
+
+                func walk(_ view: UIView, parentID: String?, depth: Int) {
+                    let nodeID = "\\(ObjectIdentifier(view).hashValue)"
+                    let frameInWin = view.convert(view.bounds, to: window)
+                    let cls = String(describing: type(of: view))
+                    let label = view.accessibilityIdentifier ?? (view as? UILabel)?.text ?? (view as? UIButton)?.title(for: .normal) ?? cls
+                    items.append([
+                        "id": nodeID,
+                        "parentID": parentID as Any,
+                        "depth": depth,
+                        "childCount": view.subviews.count,
+                        "className": cls,
+                        "name": label,
+                        "displayText": label,
+                        "normalizedX": Double(frameInWin.origin.x / winW),
+                        "normalizedY": Double(frameInWin.origin.y / winH),
+                        "normalizedWidth": Double(frameInWin.size.width / winW),
+                        "normalizedHeight": Double(frameInWin.size.height / winH),
+                        "opacity": Double(view.alpha),
+                        "isHidden": view.isHidden,
+                        "cornerRadius": Double(view.layer.cornerRadius)
+                    ])
+                    for sub in view.subviews {
+                        walk(sub, parentID: nodeID, depth: depth + 1)
+                    }
+                }
+                walk(window, parentID: nil, depth: 0)
+                guard let data = try? JSONSerialization.data(withJSONObject: items),
+                      let json = String(data: data, encoding: .utf8) else { return "[]" }
+                return json
             }
 
             private func respond(_ status: String, body: String, on conn: NWConnection) {
