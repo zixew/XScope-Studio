@@ -300,12 +300,68 @@ public struct UIHierarchyInspectorService: Sendable {
         "access by kai", "mobile legends", "duolingo", "vysor"
     ]
 
-    private static let lockAndPrivateScreenPhrases: Set<String> = [
-        "enter passcode", "iphone is locked", "swipe up to unlock", "face id",
-        "touch id or enter passcode", "emergency", "slide to power off",
-        "whatsapp", "end-to-end encrypted", "imessage", "new message",
-        "camera roll", "recently deleted", "shared albums"
-    ]
+    /// Computes the full UIKit/SwiftUI class inheritance chain for the Xcode Object Inspector.
+    public static func classInheritanceChain(for kind: UIComponentNode.Kind, className: String) -> [String] {
+        let base = className.isEmpty ? "UIView" : className
+        switch kind {
+        case .window:
+            return [base, "UIWindow", "UIView", "UIResponder", "NSObject"]
+        case .button:
+            return [base, "UIButton", "UIControl", "UIView", "UIResponder", "NSObject"]
+        case .control:
+            return [base, "UIControl", "UIView", "UIResponder", "NSObject"]
+        case .inputField:
+            return [base, "UITextField", "UIControl", "UIView", "UIResponder", "NSObject"]
+        case .label:
+            return [base, "UILabel", "UIView", "UIResponder", "NSObject"]
+        case .imageView, .banner:
+            return [base, "UIImageView", "UIView", "UIResponder", "NSObject"]
+        case .tableView:
+            return [base, "UITableView", "UIScrollView", "UIView", "UIResponder", "NSObject"]
+        case .collectionView:
+            return [base, "UICollectionView", "UIScrollView", "UIView", "UIResponder", "NSObject"]
+        case .scrollView:
+            return [base, "UIScrollView", "UIView", "UIResponder", "NSObject"]
+        case .stackView:
+            return [base, "UIStackView", "UIView", "UIResponder", "NSObject"]
+        case .navigationBar:
+            return [base, "UINavigationBar", "UIView", "UIResponder", "NSObject"]
+        case .tabBar:
+            return [base, "UITabBar", "UIView", "UIResponder", "NSObject"]
+        case .cell:
+            return [base, "UITableViewCell", "UIView", "UIResponder", "NSObject"]
+        case .cardContainer, .actionGrid:
+            return [base, "UIView", "UIResponder", "NSObject"]
+        }
+    }
+
+    /// Converts normalized coordinates into iOS point-space Frame and Bounds for the Xcode Size Inspector.
+    public static func pointFrameAndBounds(
+        for node: UIComponentNode,
+        screenWidthPt: Double = 390,
+        screenHeightPt: Double = 844
+    ) -> (frame: CGRect, bounds: CGRect) {
+        let x = (node.normalizedX * screenWidthPt).rounded()
+        let y = (node.normalizedY * screenHeightPt).rounded()
+        let w = max(1, (node.normalizedWidth * screenWidthPt).rounded())
+        let h = max(1, (node.normalizedHeight * screenHeightPt).rounded())
+        return (CGRect(x: x, y: y, width: w, height: h), CGRect(x: 0, y: 0, width: w, height: h))
+    }
+
+    /// Collects the IDs of `rootID` and all its descendants for Xcode-style "Focus on View" subtree isolation.
+    public static func subtreeNodeIDs(rootedAt rootID: String, in nodes: [UIComponentNode]) -> Set<String> {
+        var result: Set<String> = [rootID]
+        var added = true
+        while added {
+            added = false
+            for node in nodes {
+                if let pid = node.parentID, result.contains(pid), result.insert(node.id).inserted {
+                    added = true
+                }
+            }
+        }
+        return result
+    }
 
     /// Detects whether the captured device screen is currently on the iOS Home Screen (`SpringBoard`) rather than inside an opened app.
     public static func isSpringBoardHomeScreen(visibleTexts: [String]) -> Bool {
@@ -318,40 +374,6 @@ public struct UIHierarchyInspectorService: Sendable {
             }
         }
         return matchedHomeIcons.count >= 3
-    }
-
-    /// Foreground Privacy Guard: blocks the captured screen if the device is on the iOS Home Screen, Lock/Passcode screen,
-    /// or inside a private/non-Xcode application whose visible text does not match the active Xcode project.
-    public static func isPrivateOrNonXcodeForegroundScreen(
-        visibleTexts: [String],
-        appName: String,
-        hasProjectFiles: Bool,
-        matchedProjectTextCount: Int,
-        hasPrimaryMatch: Bool
-    ) -> Bool {
-        if isSpringBoardHomeScreen(visibleTexts: visibleTexts) {
-            return true
-        }
-        let lowerTexts = visibleTexts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-        if lowerTexts.contains(where: { text in
-            lockAndPrivateScreenPhrases.contains(text)
-        }) && matchedProjectTextCount == 0 {
-            return true
-        }
-        // If an Xcode project with Swift screen files is open, require at least 1 visible text match in the Xcode project source
-        // (or the Xcode app name itself visible on screen) when >= 4 texts are detected on screen.
-        if hasProjectFiles && lowerTexts.count >= 4 && matchedProjectTextCount == 0 && !hasPrimaryMatch {
-            let cleanApp = appName
-                .replacingOccurrences(of: "dev", with: "", options: .caseInsensitive)
-                .replacingOccurrences(of: "ocp", with: "", options: .caseInsensitive)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            let mentionsApp = cleanApp.count >= 3 && lowerTexts.contains(where: { $0.contains(cleanApp) })
-            if !mentionsApp {
-                return true
-            }
-        }
-        return false
     }
 
     /// Builds a real-time 2D/3D UI hierarchy directly from the live captured iPhone/Simulator screenshot using Apple Vision OCR & Rectangle Detection,
@@ -410,18 +432,7 @@ public struct UIHierarchyInspectorService: Sendable {
             return []
         }
 
-        let hasProjectScreenFiles = projectURL.map { !cachedScreenFiles(in: $0).isEmpty } ?? false
         let screenContext = projectURL.map { resolveActiveScreenContext(visibleTexts: visibleTexts, in: $0) }
-        if Self.isPrivateOrNonXcodeForegroundScreen(
-            visibleTexts: visibleTexts,
-            appName: appName,
-            hasProjectFiles: hasProjectScreenFiles,
-            matchedProjectTextCount: screenContext?.textMatches.count ?? 0,
-            hasPrimaryMatch: screenContext?.primaryMatch != nil
-        ) {
-            try? FileManager.default.removeItem(at: screenshotURL)
-            return []
-        }
         let fallbackMatch: ScreenSourceMatch? = if screenContext?.primaryMatch == nil, let projectURL,
                                                    let scannedFirst = scanProjectUIComponents(in: projectURL, appName: appName).first(where: { $0.filePath != nil }) {
             ScreenSourceMatch(

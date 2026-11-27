@@ -159,11 +159,20 @@ struct SimulatorXIBInspectorPane: View {
     }
 
     private func infoTab(node: UIComponentNode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let ptMetrics = UIHierarchyInspectorService.pointFrameAndBounds(for: node)
+        let inheritance = UIHierarchyInspectorService.classInheritanceChain(for: node.kind, className: node.className)
+        return VStack(alignment: .leading, spacing: 8) {
+            infoRow("Class", node.className)
+            infoRow("Inheritance", inheritance.joined(separator: " → "))
             infoRow("Component", node.name)
             infoRow("Kind", node.kind.rawValue)
             infoRow("Source", node.locationLabel)
-            infoRow("Normalized Frame", String(format: "x:%.2f y:%.2f w:%.2f h:%.2f", node.normalizedX, node.normalizedY, node.normalizedWidth, node.normalizedHeight))
+            infoRow("Frame (pt)", String(format: "x:%.0f y:%.0f w:%.0f h:%.0f", ptMetrics.frame.origin.x, ptMetrics.frame.origin.y, ptMetrics.frame.size.width, ptMetrics.frame.size.height))
+            infoRow("Bounds (pt)", String(format: "x:0 y:0 w:%.0f h:%.0f", ptMetrics.bounds.size.width, ptMetrics.bounds.size.height))
+            infoRow("Normalized", String(format: "x:%.2f y:%.2f w:%.2f h:%.2f", node.normalizedX, node.normalizedY, node.normalizedWidth, node.normalizedHeight))
+            infoRow("Hugging H / V", node.kind == .label || node.kind == .button ? "251 / 251" : "250 / 250")
+            infoRow("Compression H / V", "750 / 750")
+            infoRow("Interaction / Clip", "\(node.isUserInteractionEnabled ? "Enabled" : "Off") • \(node.clipsToBounds ? "Clips" : "NoClip")")
             infoRow("Actions Found", "\(node.actions.count)")
             infoRow("Debug Bridge", presenter.isDebugBridgeConnected ? "Connected (:49876)" : "Zero-SDK Mode")
 

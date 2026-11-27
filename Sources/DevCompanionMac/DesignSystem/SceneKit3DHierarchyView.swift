@@ -11,10 +11,17 @@ public enum HierarchyDisplayMode: String, CaseIterable, Sendable, Identifiable {
     public var id: String { rawValue }
 }
 
+public enum SceneKitCameraPreset: String, CaseIterable, Sendable, Identifiable {
+    case front2D = "Front"
+    case iso3D = "3D"
+
+    public var id: String { rawValue }
+}
+
 /// Metal GPU-accelerated 120fps 3D Debug View Hierarchy modeled after Xcode's View Debugger:
 /// - Stepped structural container backing planes (matte light/slate cards + dark Top Header Tab with C/V icon) — never duplicating full-screen screenshot pixels.
 /// - Intermediate wireframe subview layout grid planes.
-/// - Isolated foreground leaf visual elements rendering their cropped pixel content + Xcode sky-blue selection outline.
+/// - Isolated foreground leaf visual elements rendering their cropped pixel content + Xcode sky-blue selection outline + 3D AutoLayout Constraint I-Beams.
 struct SceneKit3DHierarchyView: NSViewRepresentable {
     let nodes: [UIComponentNode]
     let fullScreenImage: CGImage?
@@ -23,14 +30,19 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
     let layerSpacing: Double
     let displayMode: HierarchyDisplayMode
     let showLabels: Bool
+    let showConstraints: Bool
+    let showClippedContent: Bool
     let zoomScale: Double
     let minDepthRatio: Double
     let maxDepthRatio: Double
     let resetTrigger: Int
+    let cameraPreset: SceneKitCameraPreset
+    let cameraPresetTrigger: Int
     let onSelectNode: (UIComponentNode) -> Void
+    let onFocusNode: (UIComponentNode) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onSelectNode: onSelectNode)
+        Coordinator(onSelectNode: onSelectNode, onFocusNode: onFocusNode)
     }
 
     func makeNSView(context: Context) -> SCNView {
@@ -63,7 +75,12 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
         let pan = NSPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePan(_:)))
         scnView.addGestureRecognizer(pan)
 
+        let doubleClick = NSClickGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleClick(_:)))
+        doubleClick.numberOfClicksRequired = 2
+        scnView.addGestureRecognizer(doubleClick)
+
         let click = NSClickGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleClick(_:)))
+        click.numberOfClicksRequired = 1
         scnView.addGestureRecognizer(click)
 
         let mag = NSMagnificationGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePinch(_:)))
@@ -75,6 +92,7 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
     func updateNSView(_ scnView: SCNView, context: Context) {
         let coordinator = context.coordinator
         coordinator.onSelectNode = onSelectNode
+        coordinator.onFocusNode = onFocusNode
         coordinator.nodesByID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
 
         if coordinator.lastResetTrigger != resetTrigger {
@@ -84,6 +102,17 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             coordinator.pivotNode?.eulerAngles = SCNVector3(CGFloat(0.08), CGFloat(-0.52), 0)
             let resetZ = CGFloat(12.5) / max(0.5, CGFloat(zoomScale))
             coordinator.cameraNode?.position = SCNVector3(0, 0, resetZ)
+            SCNTransaction.commit()
+        } else if coordinator.lastPresetTrigger != cameraPresetTrigger {
+            coordinator.lastPresetTrigger = cameraPresetTrigger
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.25
+            switch cameraPreset {
+            case .front2D:
+                coordinator.pivotNode?.eulerAngles = SCNVector3(0, 0, 0)
+            case .iso3D:
+                coordinator.pivotNode?.eulerAngles = SCNVector3(CGFloat(0.08), CGFloat(-0.52), 0)
+            }
             SCNTransaction.commit()
         } else {
             let targetZ = CGFloat(12.5) / max(0.5, CGFloat(zoomScale))
@@ -97,6 +126,8 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             || coordinator.lastImagePtr != fullScreenImage.map { Unmanaged.passUnretained($0).toOpaque() }
             || coordinator.lastDisplayMode != displayMode
             || coordinator.lastShowLabels != showLabels
+            || coordinator.lastShowConstraints != showConstraints
+            || coordinator.lastShowClipped != showClippedContent
             || abs(coordinator.lastLayerSpacing - layerSpacing) > 0.4
             || abs(coordinator.lastMinDepth - minDepthRatio) > 0.01
             || abs(coordinator.lastMaxDepth - maxDepthRatio) > 0.01
@@ -107,6 +138,8 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             coordinator.lastImagePtr = fullScreenImage.map { Unmanaged.passUnretained($0).toOpaque() }
             coordinator.lastDisplayMode = displayMode
             coordinator.lastShowLabels = showLabels
+            coordinator.lastShowConstraints = showConstraints
+            coordinator.lastShowClipped = showClippedContent
             coordinator.lastLayerSpacing = layerSpacing
             coordinator.lastMinDepth = minDepthRatio
             coordinator.lastMaxDepth = maxDepthRatio
@@ -119,6 +152,8 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 layerSpacing: layerSpacing,
                 displayMode: displayMode,
                 showLabels: showLabels,
+                showConstraints: showConstraints,
+                showClippedContent: showClippedContent,
                 minDepthRatio: minDepthRatio,
                 maxDepthRatio: maxDepthRatio
             )
@@ -131,23 +166,28 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
         weak var pivotNode: SCNNode?
         weak var cameraNode: SCNNode?
         var onSelectNode: (UIComponentNode) -> Void
+        var onFocusNode: (UIComponentNode) -> Void
 
         var nodesByID: [String: UIComponentNode] = [:]
         var lastNodes: [UIComponentNode] = []
         var lastImagePtr: UnsafeMutableRawPointer?
         var lastDisplayMode: HierarchyDisplayMode = .wireframesAndContents
         var lastShowLabels = true
+        var lastShowConstraints = true
+        var lastShowClipped = false
         var lastLayerSpacing: Double = 32
         var lastMinDepth: Double = 0.0
         var lastMaxDepth: Double = 1.0
         var lastSelectedID: String?
         var lastResetTrigger = 0
+        var lastPresetTrigger = 0
 
         private var panStartEuler: SCNVector3 = SCNVector3Zero
         private var pinchStartZ: CGFloat = 12.5
 
-        init(onSelectNode: @escaping (UIComponentNode) -> Void) {
+        init(onSelectNode: @escaping (UIComponentNode) -> Void, onFocusNode: @escaping (UIComponentNode) -> Void) {
             self.onSelectNode = onSelectNode
+            self.onFocusNode = onFocusNode
         }
 
         @objc func handlePan(_ gesture: NSPanGestureRecognizer) {
@@ -189,6 +229,22 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             }
         }
 
+        @objc func handleDoubleClick(_ gesture: NSClickGestureRecognizer) {
+            guard let view = scnView else { return }
+            let loc = gesture.location(in: view)
+            let hits = view.hitTest(loc, options: [.searchMode: SCNHitTestSearchMode.closest.rawValue])
+            for hit in hits {
+                var current: SCNNode? = hit.node
+                while let n = current {
+                    if let name = n.name, let matched = nodesByID[name] {
+                        onFocusNode(matched)
+                        return
+                    }
+                    current = n.parent
+                }
+            }
+        }
+
         func rebuildHierarchyPlanes(
             nodes: [UIComponentNode],
             fullImage: CGImage?,
@@ -197,13 +253,15 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             layerSpacing: Double,
             displayMode: HierarchyDisplayMode,
             showLabels: Bool,
+            showConstraints: Bool,
+            showClippedContent: Bool,
             minDepthRatio: Double,
             maxDepthRatio: Double
         ) {
             guard let pivot = pivotNode else { return }
             pivot.childNodes.forEach { $0.removeFromParentNode() }
 
-            let visible = nodes.filter { !$0.isHidden }
+            let visible = showClippedContent ? nodes : nodes.filter { !$0.isHidden }
             guard !visible.isEmpty else { return }
 
             let maxPlane = max(1, visible.map(\.planeIndex).max() ?? 1)
@@ -308,8 +366,93 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     scnNode.addChildNode(tabNode)
                 }
 
+                // Xcode 3D AutoLayout Constraint I-Beams for the currently selected view
+                if isSelected && showConstraints && node.kind != .window {
+                    let constraintGuides = Self.make3DConstraintGuidesNode(
+                        node: node,
+                        nodeCenterX: cx,
+                        nodeCenterY: cy,
+                        nodeWidth: w,
+                        nodeHeight: h,
+                        stageWidth: stageW,
+                        stageHeight: stageH
+                    )
+                    constraintGuides.position = SCNVector3(0, 0, 0.008)
+                    scnNode.addChildNode(constraintGuides)
+                }
+
                 pivot.addChildNode(scnNode)
             }
+        }
+
+        private static func make3DConstraintGuidesNode(
+            node: UIComponentNode,
+            nodeCenterX: CGFloat,
+            nodeCenterY: CGFloat,
+            nodeWidth: CGFloat,
+            nodeHeight: CGFloat,
+            stageWidth: CGFloat,
+            stageHeight: CGFloat
+        ) -> SCNNode {
+            let group = SCNNode()
+            let guideColor = NSColor(srgbRed: 0.16, green: 0.62, blue: 1.0, alpha: 0.95)
+            let mat = SCNMaterial()
+            mat.diffuse.contents = guideColor
+            mat.lightingModel = .constant
+            mat.isDoubleSided = true
+
+            let lineThickness: CGFloat = 0.012
+            let capSize: CGFloat = 0.09
+
+            func addIBeam(fromX: CGFloat, fromY: CGFloat, toX: CGFloat, toY: CGFloat, horizontal: Bool) {
+                let len = horizontal ? abs(toX - fromX) : abs(toY - fromY)
+                guard len > 0.04 else { return }
+                let beamGeom = SCNPlane(
+                    width: horizontal ? len : lineThickness,
+                    height: horizontal ? lineThickness : len
+                )
+                beamGeom.materials = [mat]
+                let beamNode = SCNNode(geometry: beamGeom)
+                beamNode.position = SCNVector3((fromX + toX) * 0.5, (fromY + toY) * 0.5, 0)
+                group.addChildNode(beamNode)
+
+                let capGeom = SCNPlane(
+                    width: horizontal ? lineThickness : capSize,
+                    height: horizontal ? capSize : lineThickness
+                )
+                capGeom.materials = [mat]
+                let startCap = SCNNode(geometry: capGeom)
+                startCap.position = SCNVector3(fromX, fromY, 0)
+                let endCap = SCNNode(geometry: capGeom)
+                endCap.position = SCNVector3(toX, toY, 0)
+                group.addChildNode(startCap)
+                group.addChildNode(endCap)
+            }
+
+            let leftEdgeInStage = -stageWidth * 0.5
+            let rightEdgeInStage = stageWidth * 0.5
+            let topEdgeInStage = stageHeight * 0.5
+            let botEdgeInStage = -stageHeight * 0.5
+
+            // Leading & Trailing relative to node local center (0, 0)
+            let leadingDist = (nodeCenterX - nodeWidth * 0.5) - leftEdgeInStage
+            if leadingDist > 0.05 {
+                addIBeam(fromX: -nodeWidth * 0.5 - leadingDist, fromY: 0, toX: -nodeWidth * 0.5, toY: 0, horizontal: true)
+            }
+            let trailingDist = rightEdgeInStage - (nodeCenterX + nodeWidth * 0.5)
+            if trailingDist > 0.05 {
+                addIBeam(fromX: nodeWidth * 0.5, fromY: 0, toX: nodeWidth * 0.5 + trailingDist, toY: 0, horizontal: true)
+            }
+            // Top & Bottom relative to node local center (0, 0)
+            let topDist = topEdgeInStage - (nodeCenterY + nodeHeight * 0.5)
+            if topDist > 0.05 {
+                addIBeam(fromX: 0, fromY: nodeHeight * 0.5, toX: 0, toY: nodeHeight * 0.5 + topDist, horizontal: false)
+            }
+            let botDist = (nodeCenterY - nodeHeight * 0.5) - botEdgeInStage
+            if botDist > 0.05 {
+                addIBeam(fromX: 0, fromY: -nodeHeight * 0.5 - botDist, toX: 0, toY: -nodeHeight * 0.5, horizontal: false)
+            }
+            return group
         }
 
         private static func renderHeaderTabTexture(

@@ -199,6 +199,11 @@ final class SimulatorPresenter {
     var displayMode: HierarchyDisplayMode = .wireframesAndContents
     var minDepthRatio: Double = 0.0
     var maxDepthRatio: Double = 1.0
+    var show3DConstraints: Bool = true
+    var showClippedContent: Bool = false
+    var focusedRootNodeID: String?
+    var cameraPreset: SceneKitCameraPreset = .iso3D
+    var cameraPresetTrigger: Int = 0
     var lastComponentRevertRecord: PatchRevertRecord?
 
     var deepLinkURL = ""
@@ -539,9 +544,10 @@ final class SimulatorPresenter {
     }
 
     var visibleHierarchyNodes: [UIComponentNode] {
+        let scopedNodes = displayedHierarchyNodes
         let q = hierarchySearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if !q.isEmpty {
-            return componentNodes.filter {
+            return scopedNodes.filter {
                 $0.name.lowercased().contains(q)
                     || $0.className.lowercased().contains(q)
                     || $0.kind.rawValue.lowercased().contains(q)
@@ -550,7 +556,7 @@ final class SimulatorPresenter {
         }
         var hiddenByAncestor: Set<String> = []
         var visible: [UIComponentNode] = []
-        for node in componentNodes {
+        for node in scopedNodes {
             if let pid = node.parentID, (collapsedNodeIDs.contains(pid) || hiddenByAncestor.contains(pid)) {
                 hiddenByAncestor.insert(node.id)
                 continue
@@ -558,6 +564,59 @@ final class SimulatorPresenter {
             visible.append(node)
         }
         return visible
+    }
+
+    var displayedHierarchyNodes: [UIComponentNode] {
+        guard let focusID = focusedRootNodeID,
+              componentNodes.contains(where: { $0.id == focusID }) else {
+            return componentNodes
+        }
+        let ids = UIHierarchyInspectorService.subtreeNodeIDs(rootedAt: focusID, in: componentNodes)
+        return componentNodes.filter { ids.contains($0.id) }
+    }
+
+    var focusedRootNodeName: String? {
+        guard let focusID = focusedRootNodeID else { return nil }
+        return componentNodes.first(where: { $0.id == focusID })?.name
+    }
+
+    func focusOnNode(_ node: UIComponentNode) {
+        focusedRootNodeID = node.id
+        selectedNodeID = node.id
+    }
+
+    func exitFocus() {
+        focusedRootNodeID = nil
+    }
+
+    func toggleNodeVisibility(_ nodeID: String) {
+        guard let idx = componentNodes.firstIndex(where: { $0.id == nodeID }) else { return }
+        componentNodes[idx].isHidden.toggle()
+    }
+
+    func hideViewsInFront(of nodeID: String) {
+        guard let target = componentNodes.first(where: { $0.id == nodeID }) else { return }
+        for i in componentNodes.indices where componentNodes[i].planeIndex > target.planeIndex {
+            componentNodes[i].isHidden = true
+        }
+    }
+
+    func hideViewsBehind(of nodeID: String) {
+        guard let target = componentNodes.first(where: { $0.id == nodeID }) else { return }
+        for i in componentNodes.indices where componentNodes[i].planeIndex < target.planeIndex {
+            componentNodes[i].isHidden = true
+        }
+    }
+
+    func resetHiddenViews() {
+        for i in componentNodes.indices {
+            componentNodes[i].isHidden = false
+        }
+    }
+
+    func setCameraPreset(_ preset: SceneKitCameraPreset) {
+        cameraPreset = preset
+        cameraPresetTrigger += 1
     }
 
     func toggleNodeCollapse(_ id: String) {
@@ -585,6 +644,11 @@ final class SimulatorPresenter {
         displayMode = .wireframesAndContents
         minDepthRatio = 0.0
         maxDepthRatio = 1.0
+        show3DConstraints = true
+        showClippedContent = false
+        focusedRootNodeID = nil
+        resetHiddenViews()
+        cameraPreset = .iso3D
         cameraResetCounter += 1
     }
 

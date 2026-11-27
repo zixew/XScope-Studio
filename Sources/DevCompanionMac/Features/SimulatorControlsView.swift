@@ -395,6 +395,35 @@ struct SimulatorControlsView: View {
                                                 .stroke(isSelected ? CompanionTheme.accent.opacity(0.75) : .clear, lineWidth: 1)
                                         )
                                 )
+                                .opacity(node.isHidden ? 0.45 : 1.0)
+                                .contextMenu {
+                                    Button(presenter.focusedRootNodeID == node.id ? "Exit Focus" : "Focus on \"\(node.name)\"") {
+                                        if presenter.focusedRootNodeID == node.id {
+                                            presenter.exitFocus()
+                                        } else {
+                                            presenter.focusOnNode(node)
+                                        }
+                                    }
+                                    Button(node.isHidden ? "Show View" : "Hide View") {
+                                        presenter.toggleNodeVisibility(node.id)
+                                    }
+                                    Divider()
+                                    Button("Hide Views in Front") {
+                                        presenter.hideViewsInFront(of: node.id)
+                                    }
+                                    Button("Hide Views Behind") {
+                                        presenter.hideViewsBehind(of: node.id)
+                                    }
+                                    Button("Show All Hidden Views") {
+                                        presenter.resetHiddenViews()
+                                    }
+                                    Divider()
+                                    Button("Open in Xcode (xed)") {
+                                        presenter.selectComponent(node)
+                                        Task { await presenter.openSelectedComponentInXcode() }
+                                    }
+                                    .disabled(!presenter.hasProject)
+                                }
                             }
                             .frame(minHeight: 420, maxHeight: 490)
                         }
@@ -423,9 +452,29 @@ struct SimulatorControlsView: View {
                             }
 
                             // Xcode Top Breadcrumb Jump Bar (Root ▸ Container ▸ Subview)
-                            if !presenter.breadcrumbNodes.isEmpty {
+                            if !presenter.breadcrumbNodes.isEmpty || presenter.focusedRootNodeName != nil {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 4) {
+                                        if let focusName = presenter.focusedRootNodeName {
+                                            Button {
+                                                presenter.exitFocus()
+                                            } label: {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "scope")
+                                                        .font(.system(size: 9))
+                                                    Text("Focus: \(focusName)")
+                                                        .font(.system(size: 9.5, weight: .bold))
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.system(size: 9))
+                                                }
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3)
+                                                .background(Capsule().fill(CompanionTheme.accent.opacity(0.28)))
+                                                .foregroundStyle(Color.white)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .help("Exit Focus Subtree")
+                                        }
                                         ForEach(Array(presenter.breadcrumbNodes.enumerated()), id: \.element.id) { idx, crumb in
                                             if idx > 0 {
                                                 Image(systemName: "chevron.right")
@@ -469,37 +518,90 @@ struct SimulatorControlsView: View {
                                 } else {
                                     // Authentic Xcode 3D Debug View Hierarchy
                                     SceneKit3DHierarchyView(
-                                        nodes: presenter.componentNodes,
+                                        nodes: presenter.displayedHierarchyNodes,
                                         fullScreenImage: presenter.liveScreenCGImage,
                                         croppedTextures: presenter.preCroppedTextures,
                                         selectedNodeID: presenter.selectedNode?.id,
                                         layerSpacing: presenter.layerSpacing,
                                         displayMode: presenter.displayMode,
                                         showLabels: showComponentLabels,
+                                        showConstraints: presenter.show3DConstraints,
+                                        showClippedContent: presenter.showClippedContent,
                                         zoomScale: presenter.canvasZoom,
                                         minDepthRatio: presenter.minDepthRatio,
                                         maxDepthRatio: presenter.maxDepthRatio,
                                         resetTrigger: presenter.cameraResetCounter,
+                                        cameraPreset: presenter.cameraPreset,
+                                        cameraPresetTrigger: presenter.cameraPresetTrigger,
                                         onSelectNode: { node in
                                             presenter.selectComponent(node)
+                                        },
+                                        onFocusNode: { node in
+                                            presenter.focusOnNode(node)
                                         }
                                     )
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: 460)
 
-                            // Xcode Bottom View Debugger Canvas Bar (Spacing | Display Mode | Depth Range Clip)
-                            HStack(spacing: 10) {
-                                HStack(spacing: 5) {
+                            // Xcode Bottom View Debugger Canvas Bar (Spacing | Orient | Clipped | Constraints | Display Mode | Zoom | Depth Clip)
+                            HStack(spacing: 8) {
+                                HStack(spacing: 4) {
                                     Image(systemName: "square.3.layers.3d.down.right")
                                         .font(.system(size: 10))
                                         .foregroundStyle(CompanionTheme.textSecondary)
                                     Slider(value: $presenter.layerSpacing, in: 8...68)
-                                        .frame(width: 85)
-                                        .help("Layer Spacing")
+                                        .frame(width: 72)
+                                        .help("Adjust view layer spacing")
                                 }
 
-                                Spacer()
+                                HStack(spacing: 2) {
+                                    ForEach(SceneKitCameraPreset.allCases) { preset in
+                                        Button {
+                                            presenter.setCameraPreset(preset)
+                                        } label: {
+                                            Text(preset.rawValue)
+                                                .font(.system(size: 9, weight: presenter.cameraPreset == preset ? .bold : .medium))
+                                                .foregroundStyle(presenter.cameraPreset == preset ? Color.white : CompanionTheme.textSecondary)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .fill(presenter.cameraPreset == preset ? CompanionTheme.accent.opacity(0.75) : Color.clear)
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Orient views to \(preset.rawValue)")
+                                    }
+                                }
+                                .padding(2)
+                                .background(RoundedRectangle(cornerRadius: 5).fill(CompanionTheme.glassLow))
+
+                                Button {
+                                    presenter.showClippedContent.toggle()
+                                } label: {
+                                    Image(systemName: "rectangle.dashed")
+                                        .font(.system(size: 10.5))
+                                        .foregroundStyle(presenter.showClippedContent ? Color.white : CompanionTheme.textSecondary)
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 5).fill(presenter.showClippedContent ? CompanionTheme.accent : Color.clear))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Show Clipped & Hidden Views")
+
+                                Button {
+                                    presenter.show3DConstraints.toggle()
+                                } label: {
+                                    Image(systemName: "ruler")
+                                        .font(.system(size: 10.5))
+                                        .foregroundStyle(presenter.show3DConstraints ? Color.white : CompanionTheme.textSecondary)
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 5).fill(presenter.show3DConstraints ? CompanionTheme.accent : Color.clear))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Show AutoLayout Constraints in 3D")
+
+                                Spacer(minLength: 4)
 
                                 HStack(spacing: 2) {
                                     ForEach(HierarchyDisplayMode.allCases) { mode in
@@ -509,12 +611,12 @@ struct SimulatorControlsView: View {
                                             presenter.showWireframesOnly = (mode == .wireframes)
                                         } label: {
                                             Text(mode.rawValue)
-                                                .font(.system(size: 9.5, weight: active ? .bold : .medium))
+                                                .font(.system(size: 9, weight: active ? .bold : .medium))
                                                 .foregroundStyle(active ? Color.white : CompanionTheme.textSecondary)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3)
                                                 .background(
-                                                    RoundedRectangle(cornerRadius: 5)
+                                                    RoundedRectangle(cornerRadius: 4)
                                                         .fill(active ? CompanionTheme.accent : Color.clear)
                                                 )
                                         }
@@ -524,21 +626,46 @@ struct SimulatorControlsView: View {
                                 .padding(2)
                                 .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
 
-                                Spacer()
+                                HStack(spacing: 3) {
+                                    Button {
+                                        presenter.canvasZoom = max(0.55, presenter.canvasZoom - 0.15)
+                                    } label: {
+                                        Image(systemName: "minus.magnifyingglass")
+                                            .font(.system(size: 10))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Zoom Out")
 
-                                HStack(spacing: 5) {
+                                    Text("\(Int((presenter.canvasZoom * 100).rounded()))%")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(CompanionTheme.textSecondary)
+                                        .frame(width: 32)
+
+                                    Button {
+                                        presenter.canvasZoom = min(2.2, presenter.canvasZoom + 0.15)
+                                    } label: {
+                                        Image(systemName: "plus.magnifyingglass")
+                                            .font(.system(size: 10))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Zoom In")
+                                }
+
+                                Spacer(minLength: 4)
+
+                                HStack(spacing: 4) {
                                     Text("Clip")
-                                        .font(.system(size: 9.5, weight: .medium))
+                                        .font(.system(size: 9, weight: .medium))
                                         .foregroundStyle(CompanionTheme.textMuted)
                                     Slider(value: $presenter.minDepthRatio, in: 0.0...0.85)
-                                        .frame(width: 60)
+                                        .frame(width: 48)
                                         .help("Clip Back Layers")
                                     Slider(value: $presenter.maxDepthRatio, in: 0.15...1.0)
-                                        .frame(width: 60)
+                                        .frame(width: 48)
                                         .help("Clip Front Layers")
                                 }
                             }
-                            .padding(.horizontal, 10)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: 8).fill(CompanionTheme.glassLow))
                         }

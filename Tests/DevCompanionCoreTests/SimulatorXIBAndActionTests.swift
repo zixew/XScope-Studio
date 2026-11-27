@@ -279,30 +279,34 @@ struct SimulatorXIBAndActionTests {
         )
         #expect(scoped.map(\.name) == ["BRImoDev"])
 
-        // 4. Foreground Privacy Guard blocks lock screen & private app screen with 0 project source matches
-        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
-            visibleTexts: ["Enter Passcode", "Emergency", "Cancel"],
-            appName: "BRImoDev",
-            hasProjectFiles: true,
-            matchedProjectTextCount: 0,
-            hasPrimaryMatch: false
-        ) == true)
+        // 4. Xcode Object & Size Inspector helpers: class inheritance chain, point frame/bounds, and subtree isolation
+        let chain = UIHierarchyInspectorService.classInheritanceChain(for: .button, className: "ActionButton")
+        #expect(chain == ["ActionButton", "UIButton", "UIControl", "UIView", "UIResponder", "NSObject"])
 
-        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
-            visibleTexts: ["Chats", "Updates", "Communities", "Calls", "Search"],
-            appName: "BRImoDev",
-            hasProjectFiles: true,
-            matchedProjectTextCount: 0,
-            hasPrimaryMatch: false
-        ) == true)
+        let sampleNode = UIComponentNode(
+            id: "root",
+            name: "LoginButton",
+            kind: .button,
+            normalizedX: 0.1,
+            normalizedY: 0.5,
+            normalizedWidth: 0.8,
+            normalizedHeight: 0.1,
+            fileName: "LoginVC.swift",
+            lineNumber: 10,
+            codeSnippet: "UIButton()"
+        )
+        let metrics = UIHierarchyInspectorService.pointFrameAndBounds(for: sampleNode, screenWidthPt: 390, screenHeightPt: 844)
+        #expect(metrics.frame.origin.x == 39)
+        #expect(metrics.frame.origin.y == 422)
+        #expect(metrics.bounds.origin.x == 0 && metrics.bounds.origin.y == 0)
 
-        #expect(UIHierarchyInspectorService.isPrivateOrNonXcodeForegroundScreen(
-            visibleTexts: ["Fast Menu", "QRIS", "BRIZZI", "BRIVA"],
-            appName: "BRImoDev",
-            hasProjectFiles: true,
-            matchedProjectTextCount: 3,
-            hasPrimaryMatch: true
-        ) == false)
+        let treeNodes = [
+            sampleNode,
+            UIComponentNode(id: "child-1", parentID: "root", name: "TitleLabel", kind: .label, normalizedX: 0.2, normalizedY: 0.5, normalizedWidth: 0.4, normalizedHeight: 0.05, fileName: "LoginVC.swift", lineNumber: 12, codeSnippet: "UILabel()"),
+            UIComponentNode(id: "other", parentID: nil, name: "OtherView", kind: .cardContainer, normalizedX: 0, normalizedY: 0, normalizedWidth: 1, normalizedHeight: 0.2, fileName: "LoginVC.swift", lineNumber: 20, codeSnippet: "UIView()")
+        ]
+        let subtree = UIHierarchyInspectorService.subtreeNodeIDs(rootedAt: "root", in: treeNodes)
+        #expect(subtree == Set(["root", "child-1"]))
     }
 
     @Test("UIHierarchyInspectorService.decodeImageInMemory retains full pixel data after temp screenshot file is deleted")
