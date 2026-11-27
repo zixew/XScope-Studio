@@ -259,7 +259,7 @@ public struct UIHierarchyInspectorService: Sendable {
 
         var result: [String: CGImage] = [:]
         result.reserveCapacity(nodes.count)
-        for node in nodes where node.kind != .window {
+        for node in nodes where !node.kind.isStructuralContainer || node.kind == .navigationBar || node.kind == .tabBar || node.kind == .cell {
             let cropRect = CGRect(
                 x: max(0, CGFloat(node.normalizedX) * imgW),
                 y: max(0, CGFloat(node.normalizedY) * imgH),

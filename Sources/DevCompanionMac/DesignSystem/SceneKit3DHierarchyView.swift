@@ -300,37 +300,29 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 mat.lightingModel = .constant
 
                 if node.kind == .window {
-                    // Root UIWindow plane at the very back: shows base screen context in Contents/Both mode, or dark frame in Wireframes mode
+                    // Root UIWindow / plain UIView backing plane at the very back:
+                    // Authentic Xcode Debug View renders plain backing layers in clean white (never duplicating full-screen screenshot pixels).
                     if showContents {
-                        if let fullImage {
-                            mat.diffuse.contents = fullImage
-                            mat.transparency = isSelected ? 0.95 : 0.88
-                        } else {
-                            mat.diffuse.contents = Self.renderSyntheticWindowTexture(width: w, height: h)
-                            mat.transparency = isSelected ? 0.95 : 0.88
-                        }
+                        mat.diffuse.contents = isSelected
+                            ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.45)
+                            : NSColor(white: 0.98, alpha: 0.96)
                     } else {
                         mat.diffuse.contents = isSelected
                             ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.45)
-                            : NSColor(srgbRed: 0.08, green: 0.10, blue: 0.14, alpha: 0.55)
+                            : NSColor(white: 0.96, alpha: 0.04)
                     }
                     containerOrder += 1
                 } else if isContainer {
                     // Intermediate structural containers (Card, TableView, CollectionView, StackView, ViewControllers):
-                    if showContents, let tex = croppedTextures[node.id] {
+                    // Direct visual bars/cells may show their cropped texture; layout containers render as bounded translucent frames above UIView.
+                    let isDirectVisualContainer = (node.kind == .navigationBar || node.kind == .tabBar || node.kind == .cell)
+                    if showContents, isDirectVisualContainer, let tex = croppedTextures[node.id] {
                         mat.diffuse.contents = tex
                         mat.transparency = CGFloat(node.opacity)
                     } else if isSelected {
                         mat.diffuse.contents = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42)
-                    } else if showContents {
-                        mat.diffuse.contents = Self.renderSyntheticComponentTexture(
-                            node: node,
-                            size: CGSize(width: max(180, w * 120), height: max(60, h * 120)),
-                            isSelected: isSelected
-                        )
-                        mat.transparency = 0.85
                     } else {
-                        mat.diffuse.contents = NSColor(white: 0.96, alpha: 0.04)
+                        mat.diffuse.contents = NSColor(white: 0.96, alpha: showContents ? 0.14 : 0.04)
                     }
                     containerOrder += 1
                 } else if node.isEdited {
