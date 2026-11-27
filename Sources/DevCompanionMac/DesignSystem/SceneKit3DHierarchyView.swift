@@ -301,9 +301,14 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
 
                 if node.kind == .window {
                     // Root UIWindow plane at the very back: shows base screen context in Contents/Both mode, or dark frame in Wireframes mode
-                    if showContents, let fullImage {
-                        mat.diffuse.contents = fullImage
-                        mat.transparency = isSelected ? 0.95 : 0.88
+                    if showContents {
+                        if let fullImage {
+                            mat.diffuse.contents = fullImage
+                            mat.transparency = isSelected ? 0.95 : 0.88
+                        } else {
+                            mat.diffuse.contents = Self.renderSyntheticWindowTexture(width: w, height: h)
+                            mat.transparency = isSelected ? 0.95 : 0.88
+                        }
                     } else {
                         mat.diffuse.contents = isSelected
                             ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.45)
@@ -312,11 +317,20 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     containerOrder += 1
                 } else if isContainer {
                     // Intermediate structural containers (Card, TableView, CollectionView, StackView, ViewControllers):
-                    // Render as authentic Xcode frosted-glass cards (white translucent) or royal blue selection highlight
-                    if isSelected {
+                    if showContents, let tex = croppedTextures[node.id] {
+                        mat.diffuse.contents = tex
+                        mat.transparency = CGFloat(node.opacity)
+                    } else if isSelected {
                         mat.diffuse.contents = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42)
+                    } else if showContents {
+                        mat.diffuse.contents = Self.renderSyntheticComponentTexture(
+                            node: node,
+                            size: CGSize(width: max(180, w * 120), height: max(60, h * 120)),
+                            isSelected: isSelected
+                        )
+                        mat.transparency = 0.85
                     } else {
-                        mat.diffuse.contents = NSColor(white: 0.96, alpha: showContents ? 0.16 : 0.04)
+                        mat.diffuse.contents = NSColor(white: 0.96, alpha: 0.04)
                     }
                     containerOrder += 1
                 } else if node.isEdited {
@@ -326,8 +340,12 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     mat.diffuse.contents = tex
                     mat.transparency = CGFloat(node.opacity)
                 } else if showContents {
-                    let accent = isSelected ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42) : Self.nsColor(hex: node.accentHex)
-                    mat.diffuse.contents = accent.withAlphaComponent(isSelected ? 0.42 : 0.16)
+                    mat.diffuse.contents = Self.renderSyntheticComponentTexture(
+                        node: node,
+                        size: CGSize(width: max(160, w * 120), height: max(48, h * 120)),
+                        isSelected: isSelected
+                    )
+                    mat.transparency = CGFloat(node.opacity)
                 } else {
                     mat.diffuse.contents = isSelected ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.35) : NSColor.white.withAlphaComponent(0.02)
                 }
@@ -560,6 +578,252 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
             parent.addChildNode(leftN)
             parent.addChildNode(rightN)
             return parent
+        }
+
+        private static func renderSyntheticWindowTexture(width: CGFloat, height: CGFloat) -> NSImage {
+            let scale: CGFloat = 120.0
+            let targetSize = CGSize(width: max(280, width * scale), height: max(580, height * scale))
+            let img = NSImage(size: targetSize)
+            img.lockFocus()
+            let rect = NSRect(origin: .zero, size: targetSize)
+
+            // 1. Device background with subtle corner radius
+            let cornerRadius: CGFloat = 28
+            let clipPath = NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
+            clipPath.addClip()
+
+            // Dark canvas gradient (#12141A to #1A1D24)
+            let gradient = NSGradient(
+                starting: NSColor(srgbRed: 0.07, green: 0.08, blue: 0.11, alpha: 1.0),
+                ending: NSColor(srgbRed: 0.11, green: 0.12, blue: 0.15, alpha: 1.0)
+            )
+            gradient?.draw(in: rect, angle: -90)
+
+            // Outer device bezel hairline
+            NSColor(srgbRed: 0.22, green: 0.25, blue: 0.30, alpha: 0.85).setStroke()
+            let strokePath = NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), xRadius: cornerRadius, yRadius: cornerRadius)
+            strokePath.lineWidth = 1.8
+            strokePath.stroke()
+
+            // 2. Status Bar: "9:41" at top left
+            let timeAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: NSColor.white
+            ]
+            ("9:41" as NSString).draw(at: NSPoint(x: 24, y: targetSize.height - 30), withAttributes: timeAttrs)
+
+            // Dynamic Island / Notch at top center
+            let islandW: CGFloat = min(110, targetSize.width * 0.34)
+            let islandH: CGFloat = 24
+            let islandRect = NSRect(
+                x: (targetSize.width - islandW) * 0.5,
+                y: targetSize.height - islandH - 10,
+                width: islandW,
+                height: islandH
+            )
+            NSColor(srgbRed: 0.03, green: 0.03, blue: 0.04, alpha: 0.95).setFill()
+            NSBezierPath(roundedRect: islandRect, xRadius: islandH * 0.5, yRadius: islandH * 0.5).fill()
+
+            // Cellular signal bars at top right
+            let rightX = targetSize.width - 76
+            let barBaseY = targetSize.height - 28
+            for i in 0..<4 {
+                let barH = CGFloat(4.0 + Double(i) * 2.5)
+                let barRect = NSRect(x: rightX + CGFloat(i * 5), y: barBaseY, width: 3, height: barH)
+                NSColor.white.setFill()
+                NSBezierPath(roundedRect: barRect, xRadius: 1, yRadius: 1).fill()
+            }
+
+            // Battery icon at top right
+            let battRect = NSRect(x: targetSize.width - 44, y: targetSize.height - 28, width: 20, height: 10)
+            NSColor(white: 0.85, alpha: 0.8).setStroke()
+            let battPath = NSBezierPath(roundedRect: battRect, xRadius: 2.5, yRadius: 2.5)
+            battPath.lineWidth = 1.2
+            battPath.stroke()
+            // Battery terminal cap
+            let capRect = NSRect(x: battRect.maxX + 1, y: battRect.midY - 2, width: 1.5, height: 4)
+            NSColor(white: 0.85, alpha: 0.8).setFill()
+            NSBezierPath(rect: capRect).fill()
+            // Battery green fill
+            let fillRect = battRect.insetBy(dx: 2, dy: 2)
+            NSColor(srgbRed: 0.20, green: 0.82, blue: 0.40, alpha: 0.95).setFill()
+            NSBezierPath(roundedRect: fillRect, xRadius: 1.5, yRadius: 1.5).fill()
+
+            // 3. Home Indicator bar at bottom center
+            let indW: CGFloat = min(130, targetSize.width * 0.38)
+            let indRect = NSRect(
+                x: (targetSize.width - indW) * 0.5,
+                y: 12,
+                width: indW,
+                height: 4.5
+            )
+            NSColor(white: 0.92, alpha: 0.45).setFill()
+            NSBezierPath(roundedRect: indRect, xRadius: 2.25, yRadius: 2.25).fill()
+
+            img.unlockFocus()
+            return img
+        }
+
+        private static func renderSyntheticComponentTexture(node: UIComponentNode, size: CGSize, isSelected: Bool) -> NSImage {
+            let img = NSImage(size: size)
+            img.lockFocus()
+            let rect = NSRect(origin: .zero, size: size)
+            let cr = min(size.height * 0.42, max(4, CGFloat(node.cornerRadius) * 2.5))
+            let path = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
+
+            let accent = nsColor(hex: node.accentHex)
+
+            switch node.kind {
+            case .button:
+                let bg = isSelected ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.95) : accent.withAlphaComponent(0.92)
+                bg.setFill()
+                path.fill()
+                NSColor(white: 1.0, alpha: 0.3).setStroke()
+                path.lineWidth = 1.0
+                path.stroke()
+
+                let title = node.displayText.isEmpty ? node.name : node.displayText
+                let para = NSMutableParagraphStyle()
+                para.alignment = .center
+                para.lineBreakMode = .byTruncatingTail
+                let fontSz = max(10, min(14, size.height * 0.32))
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.boldSystemFont(ofSize: fontSz),
+                    .foregroundColor: NSColor.white,
+                    .paragraphStyle: para
+                ]
+                let tSize = (title as NSString).size(withAttributes: attrs)
+                let textRect = NSRect(
+                    x: 6,
+                    y: (size.height - tSize.height) * 0.5,
+                    width: max(10, size.width - 12),
+                    height: tSize.height
+                )
+                (title as NSString).draw(in: textRect, withAttributes: attrs)
+
+            case .label:
+                let bg = isSelected
+                    ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.32)
+                    : NSColor(white: 0.16, alpha: 0.45)
+                bg.setFill()
+                path.fill()
+                if isSelected {
+                    NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.8).setStroke()
+                    path.lineWidth = 1.0
+                    path.stroke()
+                }
+
+                let title = node.displayText.isEmpty ? node.name : node.displayText
+                let para = NSMutableParagraphStyle()
+                para.alignment = .center
+                para.lineBreakMode = .byTruncatingTail
+                let fontSz = max(9.5, min(15, CGFloat(node.fontSize) * 0.82))
+                let textColor = node.accentHex.isEmpty || node.accentHex.lowercased() == "#ffffff" ? NSColor.white : accent
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: fontSz, weight: node.fontWeight.lowercased() == "bold" ? .bold : .medium),
+                    .foregroundColor: textColor,
+                    .paragraphStyle: para
+                ]
+                let tSize = (title as NSString).size(withAttributes: attrs)
+                let textRect = NSRect(
+                    x: 4,
+                    y: (size.height - tSize.height) * 0.5,
+                    width: max(10, size.width - 8),
+                    height: tSize.height
+                )
+                (title as NSString).draw(in: textRect, withAttributes: attrs)
+
+            case .inputField:
+                let bg = NSColor(white: 0.15, alpha: 0.88)
+                bg.setFill()
+                path.fill()
+                NSColor(white: 0.45, alpha: 0.5).setStroke()
+                path.lineWidth = 1.0
+                path.stroke()
+
+                let title = node.displayText.isEmpty ? node.name : node.displayText
+                let para = NSMutableParagraphStyle()
+                para.alignment = .left
+                para.lineBreakMode = .byTruncatingTail
+                let fontSz = max(9.5, min(13, size.height * 0.28))
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: fontSz),
+                    .foregroundColor: NSColor(white: 0.78, alpha: 1.0),
+                    .paragraphStyle: para
+                ]
+                let tSize = (title as NSString).size(withAttributes: attrs)
+                let textRect = NSRect(
+                    x: 8,
+                    y: (size.height - tSize.height) * 0.5,
+                    width: max(10, size.width - 16),
+                    height: tSize.height
+                )
+                (title as NSString).draw(in: textRect, withAttributes: attrs)
+
+                let cursorRect = NSRect(x: textRect.minX + tSize.width + 2, y: textRect.minY + 1, width: 1.5, height: textRect.height - 2)
+                accent.setFill()
+                NSBezierPath(rect: cursorRect).fill()
+
+            case .imageView, .banner:
+                let bg = NSColor(white: 0.14, alpha: 0.82)
+                bg.setFill()
+                path.fill()
+                accent.withAlphaComponent(0.4).setStroke()
+                path.lineWidth = 1.0
+                path.stroke()
+
+                let title = node.displayText.isEmpty ? node.name : node.displayText
+                let para = NSMutableParagraphStyle()
+                para.alignment = .center
+                para.lineBreakMode = .byTruncatingTail
+                let fontSz = max(9, min(12, size.height * 0.22))
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: fontSz, weight: .medium),
+                    .foregroundColor: NSColor(white: 0.85, alpha: 1.0),
+                    .paragraphStyle: para
+                ]
+                let tSize = (title as NSString).size(withAttributes: attrs)
+                let textRect = NSRect(
+                    x: 4,
+                    y: (size.height - tSize.height) * 0.5,
+                    width: max(10, size.width - 8),
+                    height: tSize.height
+                )
+                (title as NSString).draw(in: textRect, withAttributes: attrs)
+
+            default:
+                let bg = isSelected
+                    ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.38)
+                    : NSColor(white: 0.20, alpha: 0.35)
+                bg.setFill()
+                path.fill()
+                NSColor(white: 0.65, alpha: isSelected ? 0.85 : 0.28).setStroke()
+                path.lineWidth = isSelected ? 1.5 : 0.8
+                path.stroke()
+
+                if size.height >= 28 {
+                    let title = node.name
+                    let para = NSMutableParagraphStyle()
+                    para.alignment = .left
+                    para.lineBreakMode = .byTruncatingTail
+                    let attrs: [NSAttributedString.Key: Any] = [
+                        .font: NSFont.boldSystemFont(ofSize: max(9, min(12, size.height * 0.22))),
+                        .foregroundColor: NSColor(white: 0.92, alpha: 0.90),
+                        .paragraphStyle: para
+                    ]
+                    let tSize = (title as NSString).size(withAttributes: attrs)
+                    let textRect = NSRect(
+                        x: 8,
+                        y: size.height - tSize.height - 6,
+                        width: max(10, size.width - 16),
+                        height: tSize.height
+                    )
+                    (title as NSString).draw(in: textRect, withAttributes: attrs)
+                }
+            }
+
+            img.unlockFocus()
+            return img
         }
 
         private static func renderEditedTexture(node: UIComponentNode, size: CGSize) -> NSImage {

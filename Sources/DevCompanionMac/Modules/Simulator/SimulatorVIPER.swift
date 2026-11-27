@@ -479,15 +479,22 @@ final class SimulatorPresenter {
         var capturedURL: URL?
 
         // 1. Capture live screen from either Physical iPhone (devicectl) or Booted Simulator (simctl)
-        if app.isPhysicalDevice,
-           let devID = app.deviceID
-            ?? router.activePhysicalDevices.first(where: { $0.name == app.deviceName })?.id
-            ?? router.selectedPhysicalDeviceID
-            ?? router.activePhysicalDevices.first?.id {
-            if let out = try? await interactor.capturePhysicalDeviceScreenshot(deviceID: devID, to: screenURL),
-               out.isSuccess,
-               FileManager.default.fileExists(atPath: screenURL.path) {
-                capturedURL = screenURL
+        if app.isPhysicalDevice {
+            var candidateDevIDs: [String] = []
+            if let devID = app.deviceID { candidateDevIDs.append(devID) }
+            if let namedDev = router.activePhysicalDevices.first(where: { $0.name == app.deviceName })?.id {
+                candidateDevIDs.append(namedDev)
+            }
+            if let selDev = router.selectedPhysicalDeviceID { candidateDevIDs.append(selDev) }
+            candidateDevIDs.append(contentsOf: router.activePhysicalDevices.map(\.id))
+
+            for devID in candidateDevIDs {
+                if let out = try? await interactor.capturePhysicalDeviceScreenshot(deviceID: devID, to: screenURL),
+                   out.isSuccess,
+                   FileManager.default.fileExists(atPath: screenURL.path) {
+                    capturedURL = screenURL
+                    break
+                }
             }
         } else if hasBootedSimulator && !app.isPhysicalDevice {
             if let out = try? await interactor.captureScreenshot(to: screenURL, udid: resolvedBootedUDID),

@@ -227,21 +227,33 @@ public struct SimulatorService: Sendable {
                 ?? (hwProps?["productType"] as? String)
                 ?? (hwProps?["deviceType"] as? String)
                 ?? "iPhone"
+            let props = entry["properties"] as? [String: Any]
+            let connPropsNew = props?["connection"] as? [String: Any]
+            let modernState = (connPropsNew?["state"] as? String)?.lowercased()
+
             let connProps = entry["connectionProperties"] as? [String: Any]
-            let transport = (connProps?["transportType"] as? String) ?? "USB/Wi-Fi"
+            let transport = (connProps?["transportType"] as? String)
+                ?? (connPropsNew?["authenticationType"] as? String)
+                ?? "USB/Wi-Fi"
             let tunnelState = (connProps?["tunnelState"] as? String)?.lowercased() ?? ""
-            let pairingState = (connProps?["pairingState"] as? String)?.lowercased() ?? ""
+            let pairingState = (connProps?["pairingState"] as? String)?.lowercased()
+                ?? (connPropsNew?["pairingState"] as? String)?.lowercased()
+                ?? ""
             let hasExplicitTransport = connProps?["transportType"] != nil
-            let isConnected: Bool = if let connProps {
+
+            let isConnected: Bool
+            if let modernState {
+                isConnected = (modernState == "connected" || modernState == "connecting")
+            } else if let connProps {
                 if tunnelState == "disconnected" || tunnelState == "unavailable" || pairingState == "unpaired" {
-                    false
+                    isConnected = false
                 } else if tunnelState == "connected" || tunnelState == "connecting" || hasExplicitTransport {
-                    true
+                    isConnected = true
                 } else {
-                    connProps.isEmpty
+                    isConnected = connProps.isEmpty
                 }
             } else {
-                true
+                isConnected = true
             }
 
             return PhysicalDevice(

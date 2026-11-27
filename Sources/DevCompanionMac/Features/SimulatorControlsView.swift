@@ -714,6 +714,29 @@ struct SimulatorControlsView: View {
                                         .frame(width: w, height: h)
                                         .clipShape(RoundedRectangle(cornerRadius: 22))
                                         .opacity(zLayerFilter == 0 ? 0.94 : 1.0)
+                                } else if !presenter.showWireframesOnly {
+                                    VStack {
+                                        HStack {
+                                            Text("9:41")
+                                                .font(.system(size: 10, weight: .semibold))
+                                                .foregroundStyle(Color.white.opacity(0.85))
+                                            Spacer()
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "cellularbars")
+                                                Image(systemName: "wifi")
+                                                Image(systemName: "battery.100")
+                                            }
+                                            .font(.system(size: 8))
+                                            .foregroundStyle(Color.white.opacity(0.85))
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.top, 8)
+                                        Spacer()
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.35))
+                                            .frame(width: 80, height: 3.5)
+                                            .padding(.bottom, 6)
+                                    }
                                 }
                             }
                         )
