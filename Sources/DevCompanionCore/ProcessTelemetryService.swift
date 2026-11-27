@@ -161,19 +161,43 @@ public struct ProcessTelemetryService: Sendable {
     }
 
     public func listRunningPhysicalDeviceProcesses(deviceID: String, deviceName: String) async -> [SimulatorProcessInfo] {
-        let tempURL = FileManager.default.temporaryDirectory
+        let tempProcURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("devcompanion_proc_\(UUID().uuidString).json")
-        defer { try? FileManager.default.removeItem(at: tempURL) }
+        let tempAppsURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("devcompanion_apps_\(UUID().uuidString).json")
+        defer {
+            try? FileManager.default.removeItem(at: tempProcURL)
+            try? FileManager.default.removeItem(at: tempAppsURL)
+        }
+
+        // 1. Fetch developer-built apps (`builtByDeveloper == true`) installed via Xcode on this device
+        var allowedDevApps: Set<String>? = nil
+        if let appsOut = try? await runner.run(
+            "/usr/bin/xcrun",
+            arguments: ["devicectl", "device", "info", "apps", "--device", deviceID, "--json-output", tempAppsURL.path],
+            workingDirectory: nil
+        ),
+        appsOut.isSuccess,
+        let appsData = try? Data(contentsOf: tempAppsURL) {
+            allowedDevApps = Self.parseDeveloperAppNames(from: appsData)
+        }
+
+        // 2. Fetch running processes and intersect with developer-built apps
         guard let output = try? await runner.run(
             "/usr/bin/xcrun",
-            arguments: ["devicectl", "device", "info", "processes", "--device", deviceID, "--json-output", tempURL.path],
+            arguments: ["devicectl", "device", "info", "processes", "--device", deviceID, "--json-output", tempProcURL.path],
             workingDirectory: nil
         ),
         output.isSuccess,
-        let data = try? Data(contentsOf: tempURL)
+        let data = try? Data(contentsOf: tempProcURL)
         else { return [] }
 
-        return Self.parsePhysicalDeviceProcesses(from: data, deviceID: deviceID, deviceName: deviceName)
+        return Self.parsePhysicalDeviceProcesses(
+            from: data,
+            deviceID: deviceID,
+            deviceName: deviceName,
+            allowedDeveloperApps: allowedDevApps
+        )
     }
 
     public func sampleTelemetry(pid: Int32) async -> ProcessTelemetrySample? {
@@ -312,10 +336,45 @@ public struct ProcessTelemetryService: Sendable {
         return targetApps
     }
 
+    private static let nonDeveloperAppBlocklist: Set<String> = [
+        "mobilecal", "mobilesafari", "mobiletimer", "photos", "testflight",
+        "whatsapp", "discord", "telegram", "duolingomobile", "globalprotect",
+        "vysor", "preferences", "springboard", "shortcuts", "files",
+        "appstore", "music", "podcasts", "weather", "maps", "mail",
+        "notes", "reminders", "camera", "clock", "calculator", "compass",
+        "findmy", "health", "wallet", "stocks", "tips", "measure", "voicememos"
+    ]
+
+    public static func parseDeveloperAppNames(from data: Data) -> Set<String> {
+        guard
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let resultObj = json["result"] as? [String: Any],
+            let apps = resultObj["apps"] as? [[String: Any]]
+        else { return [] }
+
+        var names: Set<String> = []
+        for app in apps {
+            let isDev = (app["builtByDeveloper"] as? Bool) ?? false
+            guard isDev else { continue }
+            if let name = app["name"] as? String, !name.isEmpty {
+                names.insert(name.lowercased())
+            }
+            if let urlStr = app["url"] as? String,
+               let url = URL(string: urlStr) {
+                let bundleFolder = url.deletingPathExtension().lastPathComponent.removingPercentEncoding ?? url.deletingPathExtension().lastPathComponent
+                if !bundleFolder.isEmpty {
+                    names.insert(bundleFolder.lowercased())
+                }
+            }
+        }
+        return names
+    }
+
     public static func parsePhysicalDeviceProcesses(
         from data: Data,
         deviceID: String,
-        deviceName: String
+        deviceName: String,
+        allowedDeveloperApps: Set<String>? = nil
     ) -> [SimulatorProcessInfo] {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -335,12 +394,20 @@ public struct ProcessTelemetryService: Sendable {
             guard execStr.contains(".app/") && (execStr.contains("/Containers/Bundle/Application/") || execStr.contains("/var/containers/Bundle/Application/")) else {
                 continue
             }
-            let appName = URL(string: execStr)?.lastPathComponent ?? URL(fileURLWithPath: execStr).lastPathComponent
-            guard !appName.isEmpty, seen.insert(pid).inserted else { continue }
+            let appName = (URL(string: execStr)?.lastPathComponent ?? URL(fileURLWithPath: execStr).lastPathComponent)
+            let decodedName = appName.removingPercentEncoding ?? appName
+            let lowerName = decodedName.lowercased()
+            guard !decodedName.isEmpty, !nonDeveloperAppBlocklist.contains(lowerName) else { continue }
+
+            if let allowedDeveloperApps {
+                guard allowedDeveloperApps.contains(lowerName) else { continue }
+            }
+
+            guard seen.insert(pid).inserted else { continue }
             userApps.append(
                 SimulatorProcessInfo(
                     id: pid,
-                    name: appName,
+                    name: decodedName,
                     deviceID: deviceID,
                     deviceName: deviceName,
                     isUserApp: true

@@ -129,6 +129,13 @@ final class SimulatorPresenter {
     var workspaceTab: SimulatorWorkspaceTab = .uiInspector
     var renderMode: UIRenderDimensionMode = .render3D
     var runningApps: [SimulatorProcessInfo] = []
+    var wiredUSBOnly: Bool = false {
+        didSet {
+            if let targetID = selectedTargetID, !availableTargets.contains(where: { $0.id == targetID }) {
+                selectedTargetID = nil
+            }
+        }
+    }
     var selectedTargetID: String? {
         didSet {
             if oldValue != selectedTargetID {
@@ -328,9 +335,11 @@ final class SimulatorPresenter {
         let sims = router.bootedSimulators.map {
             InspectorTargetOption(id: $0.id, title: "[SIM] \($0.name)", isPhysicalDevice: false)
         }
-        let devs = router.activePhysicalDevices.map {
-            InspectorTargetOption(id: $0.id, title: "[DEVICE] \($0.name) (iOS \($0.osVersion))", isPhysicalDevice: true)
-        }
+        let devs = router.activePhysicalDevices
+            .filter { !wiredUSBOnly || $0.isWiredUSB }
+            .map {
+                InspectorTargetOption(id: $0.id, title: "[\($0.connectionBadge)] \($0.name) (iOS \($0.osVersion))", isPhysicalDevice: true)
+            }
         return sims + devs
     }
 
@@ -454,6 +463,8 @@ final class SimulatorPresenter {
         if selectedNodeID == nil || !nodes.contains(where: { $0.id == selectedNodeID }) {
             selectedNodeID = nodes.last?.id ?? nodes.first?.id
         }
+        // Always refresh draftNode & source slice when componentNodes are replaced so draftNode never stays stale
+        loadDraftForSelection()
     }
 
     func selectComponent(_ node: UIComponentNode) {

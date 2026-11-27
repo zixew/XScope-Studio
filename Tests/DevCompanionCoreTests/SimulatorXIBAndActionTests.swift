@@ -168,4 +168,48 @@ struct SimulatorXIBAndActionTests {
         #expect(deviceApps.count == 1)
         #expect(deviceApps.first?.id == 901)
     }
+
+    @Test("ProcessTelemetryService filters out non-developer background apps (Discord, WhatsApp, Photos) and PhysicalDevice distinguishes USB vs Wi-Fi")
+    func filtersDeveloperAppsAndWiredUSB() {
+        let appsJSON = """
+        {
+          "result": {
+            "apps": [
+              { "builtByDeveloper": true, "name": "BRImoOCP", "url": "file:///private/var/containers/Bundle/Application/111/BRImoOCP.app/" },
+              { "builtByDeveloper": false, "name": "WhatsApp", "url": "file:///private/var/containers/Bundle/Application/222/WhatsApp.app/" }
+            ]
+          }
+        }
+        """.data(using: .utf8)!
+        let allowed = ProcessTelemetryService.parseDeveloperAppNames(from: appsJSON)
+        #expect(allowed.contains("brimoocp"))
+        #expect(!allowed.contains("whatsapp"))
+
+        let procsJSON = """
+        {
+          "result": {
+            "runningProcesses": [
+              { "processIdentifier": 9247, "executable": "file:///private/var/containers/Bundle/Application/A/Discord.app/Discord" },
+              { "processIdentifier": 9298, "executable": "file:///private/var/containers/Bundle/Application/B/Photos.app/Photos" },
+              { "processIdentifier": 9242, "executable": "file:///private/var/containers/Bundle/Application/C/WhatsApp.app/WhatsApp" },
+              { "processIdentifier": 9500, "executable": "file:///private/var/containers/Bundle/Application/111/BRImoOCP.app/BRImoOCP" }
+            ]
+          }
+        }
+        """.data(using: .utf8)!
+
+        let filtered = ProcessTelemetryService.parsePhysicalDeviceProcesses(
+            from: procsJSON,
+            deviceID: "DEV-1",
+            deviceName: "iPhone 11",
+            allowedDeveloperApps: allowed
+        )
+        #expect(filtered.count == 1)
+        #expect(filtered.first?.name == "BRImoOCP")
+
+        let usbDev = PhysicalDevice(id: "U1", name: "iPhone 15", osVersion: "18.1", connectionType: "wired")
+        let wifiDev = PhysicalDevice(id: "W1", name: "BRI iPhone 11", osVersion: "16.1", connectionType: "localNetwork")
+        #expect(usbDev.isWiredUSB == true && usbDev.connectionBadge == "USB")
+        #expect(wifiDev.isWiredUSB == false && wifiDev.connectionBadge == "Wi-Fi")
+    }
 }

@@ -122,8 +122,15 @@ struct SimulatorControlsView: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 195)
+                    .frame(width: 205)
                     .fixedSize(horizontal: true, vertical: false)
+
+                    Toggle("USB Only", isOn: $presenter.wiredUSBOnly)
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 10))
+                        .foregroundStyle(CompanionTheme.textSecondary)
+                        .help("Hide Wi-Fi / Local Network devices and show only Wired USB devices & Simulators")
+                        .preventSquish()
 
                     HStack(spacing: 6) {
                         Circle()
@@ -137,8 +144,12 @@ struct SimulatorControlsView: View {
                     .fixedSize()
 
                     Picker("", selection: $presenter.selectedRunningApp) {
-                        Text(presenter.selectedTargetID == nil ? "Select Target First…" : "Select Opened App…")
-                            .tag(SimulatorProcessInfo?.none)
+                        Text(
+                            presenter.selectedTargetID == nil
+                                ? "Select Target First…"
+                                : (presenter.filteredRunningApps.isEmpty ? "No Developer App Open" : "Select Opened App…")
+                        )
+                        .tag(SimulatorProcessInfo?.none)
                         ForEach(presenter.filteredRunningApps) { app in
                             Text("\(app.name) (PID \(app.id))").tag(SimulatorProcessInfo?.some(app))
                         }

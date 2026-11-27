@@ -49,6 +49,15 @@ public struct PhysicalDevice: Identifiable, Sendable, Equatable, Hashable {
     public let connectionType: String
     public let isConnected: Bool
 
+    public var isWiredUSB: Bool {
+        let lower = connectionType.lowercased()
+        return lower == "wired" || lower == "usb"
+    }
+
+    public var connectionBadge: String {
+        isWiredUSB ? "USB" : "Wi-Fi"
+    }
+
     public init(
         id: String,
         name: String,
@@ -245,7 +254,10 @@ public struct SimulatorService: Sendable {
             )
         }
 
-        let connected = parsed.filter(\.isConnected)
+        let connected = parsed.filter(\.isConnected).sorted { lhs, rhs in
+            if lhs.isWiredUSB != rhs.isWiredUSB { return lhs.isWiredUSB }
+            return lhs.name < rhs.name
+        }
         let disconnected = parsed.filter { !$0.isConnected }
         return connected + disconnected
     }
