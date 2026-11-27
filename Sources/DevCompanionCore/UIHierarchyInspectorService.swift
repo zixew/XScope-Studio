@@ -238,6 +238,19 @@ public struct UIHierarchyInspectorService: Sendable {
 
     public init() {}
 
+    /// Eagerly decodes an image file into RAM (`CGImageSourceCreateWithData` + `kCGImageSourceShouldCacheImmediately`)
+    /// so SceneKit textures remain valid even after the temporary screenshot file is shredded from disk.
+    public static func decodeImageInMemory(from url: URL) -> CGImage? {
+        guard let data = try? Data(contentsOf: url),
+              let src = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceShouldCache: true,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        return CGImageSourceCreateImageAtIndex(src, 0, options as CFDictionary)
+    }
+
     /// Pre-crops all component textures once off the main thread so 3D SceneKit & 2D overlays never crop during UI interaction.
     public static func preCropTextures(from fullImage: CGImage, nodes: [UIComponentNode]) -> [String: CGImage] {
         let imgW = CGFloat(fullImage.width)

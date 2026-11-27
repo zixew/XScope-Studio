@@ -499,11 +499,7 @@ final class SimulatorPresenter {
         let projURL = router.projectURL
         let screenFileURL = capturedURL
         let (cgImg, nodes, crops) = await Task.detached { () -> (CGImage?, [UIComponentNode], [String: CGImage]) in
-            var decoded: CGImage?
-            if let screenFileURL,
-               let src = CGImageSourceCreateWithURL(screenFileURL as CFURL, nil) {
-                decoded = CGImageSourceCreateImageAtIndex(src, 0, nil)
-            }
+            let decoded = screenFileURL.flatMap { UIHierarchyInspectorService.decodeImageInMemory(from: $0) }
             let extracted = bridgeNodes ?? interactorRef.buildUIHierarchy(for: app, screenshotURL: screenFileURL, in: projURL)
             let croppedMap = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: extracted) } ?? [:]
             return (decoded, extracted, croppedMap)

@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import ImageIO
 import Testing
 @testable import DevCompanionCore
 
@@ -301,5 +303,51 @@ struct SimulatorXIBAndActionTests {
             matchedProjectTextCount: 3,
             hasPrimaryMatch: true
         ) == false)
+    }
+
+    @Test("UIHierarchyInspectorService.decodeImageInMemory retains full pixel data after temp screenshot file is deleted")
+    func decodeImageInMemorySurvivesFileDeletion() throws {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("xscope_mem_test_\(UUID().uuidString).png")
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width: 40,
+            height: 80,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ),
+        let sampleCG = ctx.makeImage(),
+        let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, "public.png" as CFString, 1, nil)
+        else {
+            Issue.record("Failed to create test PNG")
+            return
+        }
+        CGImageDestinationAddImage(dest, sampleCG, nil)
+        #expect(CGImageDestinationFinalize(dest))
+
+        let decoded = UIHierarchyInspectorService.decodeImageInMemory(from: tempURL)
+        try? FileManager.default.removeItem(at: tempURL)
+
+        #expect(decoded != nil)
+        #expect(decoded?.width == 40)
+        #expect(decoded?.height == 80)
+        #expect(decoded?.dataProvider?.data != nil)
+
+        let leaf = UIComponentNode(
+            id: "leaf-1",
+            name: "CTA",
+            kind: .button,
+            normalizedX: 0.1,
+            normalizedY: 0.1,
+            normalizedWidth: 0.8,
+            normalizedHeight: 0.5,
+            fileName: "Test.swift",
+            lineNumber: 1,
+            codeSnippet: "UIButton()"
+        )
+        let crops = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: [leaf]) } ?? [:]
+        #expect(crops["leaf-1"] != nil)
     }
 }
