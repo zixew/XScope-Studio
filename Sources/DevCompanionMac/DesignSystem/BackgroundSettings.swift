@@ -73,21 +73,28 @@ final class BackgroundSettings {
                 return
             }
             Task {
-                let downsampled = await Task.detached(priority: .userInitiated) {
-                    Self.loadDownsampledImage(atPath: path, maxPixelSize: 1920)
+                let cgImage = await Task.detached(priority: .userInitiated) {
+                    Self.loadDownsampledCGImage(atPath: path, maxPixelSize: 1920)
                 }.value
                 if self.customImagePath == path && self.preset == .custom {
-                    self.cachedImage = downsampled
+                    if let cgImage {
+                        self.cachedImage = NSImage(
+                            cgImage: cgImage,
+                            size: NSSize(width: cgImage.width, height: cgImage.height)
+                        )
+                    } else {
+                        self.cachedImage = NSImage(contentsOfFile: path)
+                    }
                 }
             }
         }
     }
 
-    nonisolated private static func loadDownsampledImage(atPath path: String, maxPixelSize: CGFloat) -> NSImage? {
+    nonisolated private static func loadDownsampledCGImage(atPath path: String, maxPixelSize: CGFloat) -> CGImage? {
         let url = URL(fileURLWithPath: path) as CFURL
         let sourceOptions: [CFString: Any] = [kCGImageSourceShouldCache: false]
         guard let source = CGImageSourceCreateWithURL(url, sourceOptions as CFDictionary) else {
-            return NSImage(contentsOfFile: path)
+            return nil
         }
         let thumbOptions: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -95,10 +102,7 @@ final class BackgroundSettings {
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
         ]
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else {
-            return NSImage(contentsOfFile: path)
-        }
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary)
     }
 
     var scrimColor: Color {
