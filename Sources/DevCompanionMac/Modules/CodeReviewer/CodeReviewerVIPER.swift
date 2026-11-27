@@ -23,6 +23,7 @@ protocol CodeReviewerInteractorProtocol: Sendable {
     func applyPatch(to fileURL: URL, oldSnippet: String, newSnippet: String, lineNumber: Int?) throws -> PatchRevertRecord
     func revertPatch(_ record: PatchRevertRecord) throws
     func buildAntigravityPrompt(for finding: CodeReviewFinding, filePath: String?) -> String
+    func buildCompactFindingPrompt(for finding: CodeReviewFinding, filePath: String?) -> String
 }
 
 struct CodeReviewerInteractor: CodeReviewerInteractorProtocol {
@@ -89,6 +90,10 @@ struct CodeReviewerInteractor: CodeReviewerInteractorProtocol {
     func buildAntigravityPrompt(for finding: CodeReviewFinding, filePath: String?) -> String {
         agentService.buildAntigravityPrompt(for: finding, filePath: filePath)
     }
+
+    func buildCompactFindingPrompt(for finding: CodeReviewFinding, filePath: String?) -> String {
+        agentService.buildCompactFindingPrompt(for: finding, filePath: filePath)
+    }
 }
 
 @MainActor
@@ -100,6 +105,7 @@ final class CodeReviewerPresenter {
         }
     }
     var customSwiftCode: String = ""
+    var selectedFindingForDetail: CodeReviewFinding?
     var hasAnalyzed = false
     /// Strict gate: remains `false` until the user explicitly chooses a scope/category and triggers Code Review.
     /// Background Smart Scan or session restore populates `findings` for Leaks & Hangs without opening this gate.
@@ -262,10 +268,37 @@ final class CodeReviewerPresenter {
 
     func copyAntigravityPrompt(for finding: CodeReviewFinding, openApp: Bool = true) {
         let path = router.projectURL.flatMap { router.findFile(named: finding.fileName, in: $0)?.path }
-        let prompt = interactor.buildAntigravityPrompt(for: finding, filePath: path)
+        let prompt = interactor.buildCompactFindingPrompt(for: finding, filePath: path)
         clipboard.copyString(prompt)
         router.statusMessage = AppStrings.Performance.antigravityPromptCopied
         if openApp { router.openAntigravity() }
+    }
+
+    func detailFixProposal(for finding: CodeReviewFinding) -> AgentFixProposal {
+        let path = router.projectURL.flatMap { router.findFile(named: finding.fileName, in: $0)?.path }
+        return interactor.deterministicFix(for: finding, filePath: path)
+    }
+
+    func detailCompactPrompt(for finding: CodeReviewFinding) -> String {
+        let path = router.projectURL.flatMap { router.findFile(named: finding.fileName, in: $0)?.path }
+        return interactor.buildCompactFindingPrompt(for: finding, filePath: path)
+    }
+
+    func detailSourceContext(for finding: CodeReviewFinding, radius: Int = 8) -> String? {
+        guard let root = router.projectURL,
+              let fileURL = router.findFile(named: finding.fileName, in: root),
+              let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            return nil
+        }
+        let lines = content.components(separatedBy: .newlines)
+        guard !lines.isEmpty else { return nil }
+        let start = max(1, finding.lineNumber - radius)
+        let end = min(lines.count, finding.lineNumber + radius)
+        guard start <= end else { return nil }
+        return (start...end).map { idx in
+            let marker = idx == finding.lineNumber ? "▶" : " "
+            return String(format: "%@ %4d | %@", marker, idx, lines[idx - 1])
+        }.joined(separator: "\n")
     }
 
     var hasProjectURL: Bool { router.projectURL != nil }

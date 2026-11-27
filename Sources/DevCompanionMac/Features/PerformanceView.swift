@@ -7,6 +7,8 @@ struct PerformanceView: View {
     var onOpenCrashlytics: (() -> Void)?
     @State private var hoverIndex: Int?
     @State private var staticHoverEventID: String?
+    @State private var selectedFreezeForDetail: FreezeLagEvent?
+    @State private var showAllRuntimeLeakFrames = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -544,6 +546,67 @@ struct PerformanceView: View {
         .task {
             await presenter.refreshReportsAndProcesses()
         }
+        .sheet(item: $selectedFreezeForDetail) { freeze in
+            freezeDetailSheet(freeze)
+        }
+    }
+
+    @ViewBuilder
+    private func freezeDetailSheet(_ freeze: FreezeLagEvent) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(freeze.culpritSymbol)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .foregroundStyle(CompanionTheme.coral)
+                    Text("\(String(format: "%.2fs", freeze.durationSeconds)) • \(Int(freeze.peakCPUPercent))% CPU • \(String(format: "%.0f MB", freeze.memoryMB))")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(CompanionTheme.textSecondary)
+                }
+                Spacer()
+                Button("Close") {
+                    selectedFreezeForDetail = nil
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let file = freeze.fileName {
+                Text("\(file):\(freeze.lineNumber ?? 1)")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(CompanionTheme.accent)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !freeze.reason.isEmpty {
+                        Text(freeze.reason)
+                            .font(.system(size: 12))
+                            .foregroundStyle(CompanionTheme.textPrimary)
+                            .textSelection(.enabled)
+                    }
+                    if !freeze.codeSnippet.isEmpty {
+                        XcodeCodeText(code: freeze.codeSnippet, fontSize: 11)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.black.opacity(0.35))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+            }
+
+            if let line = freeze.lineNumber {
+                HStack {
+                    Button(AppStrings.Performance.openInXcode) {
+                        Task { await presenter.openInXcode(line: line) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Spacer()
+                }
+            }
+        }
+        .padding(18)
+        .frame(width: 560, height: 400)
+        .background(CompanionTheme.windowBackground)
     }
 
     private func telemetryMetric(_ title: String, _ value: String, _ sub: String) -> some View {
@@ -600,18 +663,29 @@ struct PerformanceView: View {
                         .padding(.vertical, 10)
                 } else {
                     ForEach(presenter.realtimeSessionFreezes) { freeze in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(freeze.culpritSymbol) • \(String(format: "%.2fs", freeze.durationSeconds))")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(CompanionTheme.coral)
-                            Text(freeze.reason)
-                                .font(.system(size: 10))
-                                .foregroundStyle(CompanionTheme.textSecondary)
-                                .lineLimit(1)
+                        Button {
+                            selectedFreezeForDetail = freeze
+                        } label: {
+                            HStack(spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(freeze.culpritSymbol) • \(String(format: "%.2fs", freeze.durationSeconds))")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(CompanionTheme.coral)
+                                    Text(freeze.reason)
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(CompanionTheme.textSecondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Image(systemName: AppConstants.Icons.chevronRight)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(CompanionTheme.textMuted)
+                            }
+                            .padding(7)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
                         }
-                        .padding(7)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -647,11 +721,20 @@ struct PerformanceView: View {
                 }
             }
             if let frames = snap?.topFrames, !frames.isEmpty {
-                ForEach(frames.prefix(3), id: \.self) { frame in
+                let displayedFrames = showAllRuntimeLeakFrames ? frames : Array(frames.prefix(3))
+                ForEach(displayedFrames, id: \.self) { frame in
                     Text(frame)
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(CompanionTheme.textSecondary)
-                        .lineLimit(1)
+                        .lineLimit(showAllRuntimeLeakFrames ? nil : 1)
+                }
+                if frames.count > 3 {
+                    Button(showAllRuntimeLeakFrames ? "Show less" : "Show all \(frames.count) frames") {
+                        showAllRuntimeLeakFrames.toggle()
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(CompanionTheme.accent)
+                    .buttonStyle(.plain)
                 }
             }
         }

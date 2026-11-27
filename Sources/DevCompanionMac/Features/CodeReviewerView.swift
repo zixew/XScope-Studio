@@ -271,6 +271,9 @@ struct CodeReviewerView: View {
         .task {
             await presenter.refreshProjectGitAndModules()
         }
+        .sheet(item: $presenter.selectedFindingForDetail) { finding in
+            findingDetailSheet(finding)
+        }
     }
 
     // MARK: - Searchable Branch Diff Section
@@ -616,14 +619,29 @@ struct CodeReviewerView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.mini)
                 .preventSquish()
+
+                Button {
+                    presenter.selectedFindingForDetail = item
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Detail")
+                        Image(systemName: AppConstants.Icons.chevronRight)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+                .preventSquish()
             }
             Text(item.title)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(CompanionTheme.textPrimary)
+                .lineLimit(2)
             Text(item.detail)
                 .font(.system(size: 11))
                 .foregroundStyle(CompanionTheme.textSecondary)
+                .lineLimit(2)
             XcodeCodeText(code: item.codeSnippet, fontSize: 11)
+                .lineLimit(3)
                 .padding(6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.black.opacity(0.35))
@@ -632,6 +650,146 @@ struct CodeReviewerView: View {
         .padding(10)
         .background(CompanionTheme.glassLow)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            presenter.selectedFindingForDetail = item
+        }
+    }
+
+    @ViewBuilder
+    private func findingDetailSheet(_ item: CodeReviewFinding) -> some View {
+        let proposal = presenter.detailFixProposal(for: item)
+        let compactPrompt = presenter.detailCompactPrompt(for: item)
+        let sourceContext = presenter.detailSourceContext(for: item)
+        let estTokens = max(1, (compactPrompt.count + 3) / 4)
+
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("\(item.severity.priorityBadge) \(item.severity.rawValue.uppercased())")
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(severityColor(item.severity).opacity(0.22))
+                            .foregroundStyle(severityColor(item.severity))
+                            .clipShape(Capsule())
+                        Text(item.category.rawValue)
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(CompanionTheme.accent.opacity(0.16))
+                            .foregroundStyle(CompanionTheme.accent)
+                            .clipShape(Capsule())
+                        Text("\(item.fileName):\(item.lineNumber)")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(CompanionTheme.textPrimary)
+                    }
+                    Text(item.title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(CompanionTheme.textPrimary)
+                }
+                Spacer()
+                Button("Close") {
+                    presenter.selectedFindingForDetail = nil
+                }
+                .buttonStyle(.bordered)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(item.detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(CompanionTheme.textSecondary)
+                        .textSelection(.enabled)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(sourceContext != nil ? "Source Context (\(item.fileName):\(item.lineNumber))" : "Offending Snippet")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(CompanionTheme.textPrimary)
+                        XcodeCodeText(code: sourceContext ?? item.codeSnippet, fontSize: 11)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    if proposal.newSnippet != proposal.oldSnippet {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Local Deterministic Fix (0 AI Tokens)")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(CompanionTheme.mint)
+                            Text("- \(proposal.oldSnippet)\n+ \(proposal.newSnippet)")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(CompanionTheme.textPrimary)
+                                .textSelection(.enabled)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(CompanionTheme.mint.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+
+                    if !proposal.manualSteps.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(AppStrings.Performance.manualStepsTitle)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(CompanionTheme.textPrimary)
+                            ForEach(Array(proposal.manualSteps.enumerated()), id: \.offset) { idx, step in
+                                Text("\(idx + 1). \(step)")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(CompanionTheme.textSecondary)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Compact AI Prompt")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(CompanionTheme.textPrimary)
+                            Text("~\(estTokens) tokens")
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(CompanionTheme.accent.opacity(0.18))
+                                .foregroundStyle(CompanionTheme.accent)
+                                .clipShape(Capsule())
+                        }
+                        Text(compactPrompt)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(CompanionTheme.textSecondary)
+                            .textSelection(.enabled)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.black.opacity(0.35))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button(AppStrings.Performance.openInXcode) {
+                    Task { await presenter.openInXcode(item) }
+                }
+                .buttonStyle(.bordered)
+                .disabled(!presenter.hasProjectURL)
+
+                Button(AppStrings.Performance.applyPatch) {
+                    presenter.applyQuickFix(for: item)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(AppStrings.Performance.copyAntigravityPrompt) {
+                    presenter.copyAntigravityPrompt(for: item)
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+            }
+        }
+        .padding(18)
+        .frame(width: 680, height: 560)
+        .background(CompanionTheme.windowBackground)
     }
 
     private func badgePill(_ text: String, color: Color) -> some View {
