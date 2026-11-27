@@ -1,0 +1,1680 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "bg.blur" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Blur" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Blur" } }
+      }
+    },
+    "bg.choose_custom_image" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Custom Image..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Gambar Kustom..." } }
+      }
+    },
+    "bg.preset_custom" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Custom Image" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gambar Kustom" } }
+      }
+    },
+    "bg.preset_solid" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Solid Theme" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tema Solid" } }
+      }
+    },
+    "bg.scrim_opacity" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scrim Opacity" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Opasitas Scrim" } }
+      }
+    },
+    "bg.theme_dark" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dark (Xcode)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gelap (Xcode)" } }
+      }
+    },
+    "bg.theme_light" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Light (Xcode)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terang (Xcode)" } }
+      }
+    },
+    "bg.theme_midnight" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Midnight" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Midnight" } }
+      }
+    },
+    "bg.theme_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tema" } }
+      }
+    },
+    "bg.workspace_bg_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Workspace Background" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Latar Workspace" } }
+      }
+    },
+    "codereview.analyze_code" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run Review" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Jalankan Review" } }
+      }
+    },
+    "codereview.analyzing_progress" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scanning Swift files in background..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memindai file Swift di background..." } }
+      }
+    },
+    "codereview.current_branch_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "CURRENT" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "AKTIF" } }
+      }
+    },
+    "codereview.quick_fill_pr_branches" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Use Current -> Base" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pakai Branch Aktif -> Base" } }
+      }
+    },
+    "codereview.search_branch_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search branch name..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Cari nama branch..." } }
+      }
+    },
+    "codereview.search_findings_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search file, issue title, or code..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Cari nama file, judul issue, atau kode..." } }
+      }
+    },
+    "codereview.search_module_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search module or folder..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Cari nama module atau folder..." } }
+      }
+    },
+    "codereview.select_module_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Module / Folder..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Module / Folder..." } }
+      }
+    },
+    "codereview.select_scope_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select a review mode above (Pull Request Branch Diff, Per-Module / Folder, or All Project), choose your target, and click Run Review." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih mode review di atas (Pull Request Branch Diff, Per-Module / Folder, atau All Project), tentukan branch/module, lalu klik Jalankan Review." } }
+      }
+    },
+    "codereview.select_source_branch_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Source Branch..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Branch Asal..." } }
+      }
+    },
+    "codereview.select_target_branch_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Target Branch..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Branch Tujuan..." } }
+      }
+    },
+    "codereview.stop_review" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stop" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Berhenti" } }
+      }
+    },
+    "codereview.swap_branches" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Swap" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tukar" } }
+      }
+    },
+    "codereview.view_by_file" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Grouped by File" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Per File" } }
+      }
+    },
+    "codereview.view_by_priority" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "By Priority" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Per Priority" } }
+      }
+    },
+    "codereview.browse_folder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Browse Subfolder..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Subfolder..." } }
+      }
+    },
+    "codereview.category_all" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All Categories" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Semua Kategori" } }
+      }
+    },
+    "codereview.changed_lines_only" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changed Lines Only" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hanya Baris Berubah" } }
+      }
+    },
+    "codereview.commits_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Commits & Changed Swift Files" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Daftar Commit & File Swift Berubah" } }
+      }
+    },
+    "codereview.copy_pr_report" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy PR Markdown" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Salin Markdown PR" } }
+      }
+    },
+    "codereview.module_picker_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Module / Folder" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Module / Folder" } }
+      }
+    },
+    "codereview.pr_blocked_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "NEEDS FIX (P0 BLOCKER)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "PERLU PERBAIKAN (ADA P0)" } }
+      }
+    },
+    "codereview.pr_diff_summary" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld commit(s) • %lld Swift file(s) changed" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld commit • %lld file Swift berubah" } }
+      }
+    },
+    "codereview.pr_ready_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "PR READY TO MERGE" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "SIAP PULL REQUEST" } }
+      }
+    },
+    "codereview.pr_report_copied" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown PR Review Report copied to clipboard" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Laporan Markdown PR disalin ke clipboard" } }
+      }
+    },
+    "codereview.source_branch_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "From (Source)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Dari (Asal)" } }
+      }
+    },
+    "codereview.target_branch_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Into (Target)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ke (Tujuan)" } }
+      }
+    },
+    "codereview.empty_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an Xcode project folder or paste Swift code to analyze." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder proyek Xcode atau tempel kode Swift untuk dianalisis." } }
+      }
+    },
+    "codereview.findings_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Findings (%lld)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Temuan (%lld)" } }
+      }
+    },
+    "codereview.no_findings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No findings! Code looks clean." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada temuan! Kode terlihat bersih." } }
+      }
+    },
+    "codereview.paste_editor_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste / Edit Swift Code" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tempel / Edit Kode Swift" } }
+      }
+    },
+    "codereview.review_completed_project" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Code review completed on %@: %lld finding(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Code review selesai pada %@: %lld temuan" } }
+      }
+    },
+    "codereview.review_completed_snippet" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Code review completed: %lld finding(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Code review selesai: %lld temuan" } }
+      }
+    },
+    "codereview.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Fast local analysis for [weak self] retain cycles, main-thread blocking, & SwiftUI redraws." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Analisis lokal cepat untuk retain cycle [weak self], main-thread blocking, & SwiftUI redraw." } }
+      }
+    },
+    "codereview.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "UIKit & SwiftUI Code Reviewer" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "UIKit & SwiftUI Code Reviewer" } }
+      }
+    },
+    "common.app_name" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "XScope Studio" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "XScope Studio" } }
+      }
+    },
+    "common.clear_project" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hapus Proyek" } }
+      }
+    },
+    "common.copy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Salin" } }
+      }
+    },
+    "common.copy_code" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Code" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Salin Kode" } }
+      }
+    },
+    "common.copy_diff" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Diff" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Salin Diff" } }
+      }
+    },
+    "common.no_project_selected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No project selected" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Belum ada proyek dipilih" } }
+      }
+    },
+    "common.ready" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ready" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Siap" } }
+      }
+    },
+    "common.scan_project" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pindai Proyek" } }
+      }
+    },
+    "common.scan_workspace" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan Workspace" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pindai Workspace" } }
+      }
+    },
+    "common.scanning" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scanning..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memindai..." } }
+      }
+    },
+    "common.select_project_first" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an Xcode project folder first." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder proyek Xcode terlebih dahulu." } }
+      }
+    },
+    "common.select_xcode_project" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Xcode Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Proyek Xcode" } }
+      }
+    },
+    "common.select_xcode_project_button" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Xcode Project..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Proyek Xcode..." } }
+      }
+    },
+    "menubar.clean_bar" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "9:41 Bar" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bar 9:41" } }
+      }
+    },
+    "menubar.dark_mode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dark Mode" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mode Gelap" } }
+      }
+    },
+    "menubar.light_mode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Light Mode" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mode Terang" } }
+      }
+    },
+    "menubar.sim_count" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld Sim" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld Sim" } }
+      }
+    },
+    "crash.agent_fix_section_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recommended Code Fix & Patch" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Rekomendasi Perbaikan Kode & Patch" } }
+      }
+    },
+    "crash.app_frame_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "APP" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "APP" } }
+      }
+    },
+    "crash.fatal_crashes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Fatal Crashes" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Crash Fatal" } }
+      }
+    },
+    "crash.memory_jetsam" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Memory / Jetsam" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memori / Jetsam" } }
+      }
+    },
+    "crash.no_reports_found" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No crash or hang events matching current filters." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada event crash atau hang yang sesuai filter." } }
+      }
+    },
+    "crash.non_fatal_hangs" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "ANR / Hangs" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "ANR / Hang" } }
+      }
+    },
+    "crash.open_crashlytics" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Crashlytics" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buka Crashlytics" } }
+      }
+    },
+    "crash.raw_log_tab" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Raw .ips Log" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Log Mentah .ips" } }
+      }
+    },
+    "crash.refresh_reports" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh Events" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Segarkan Event" } }
+      }
+    },
+    "crash.search_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search process, exception, symbol, or file..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Cari proses, exception, simbol, atau file..." } }
+      }
+    },
+    "crash.select_event_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select a crash or hang event on the left to inspect its stack trace, source line, and fix." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih event crash atau hang di kiri untuk melihat stack trace, baris kode, dan solusi." } }
+      }
+    },
+    "crash.stack_trace_tab" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stack Trace (Crashed Thread)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Stack Trace (Thread Crash)" } }
+      }
+    },
+    "crash.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Firebase-style Crash & ANR console for DiagnosticReports (.ips, .crash, .hang) with highlighted app frames & Xcode jump." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Konsol Crash & ANR bergaya Firebase untuk DiagnosticReports (.ips, .crash, .hang) dengan highlight frame app & lompat ke Xcode." } }
+      }
+    },
+    "crash.sys_frame_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SYS" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "SYS" } }
+      }
+    },
+    "crash.timeline_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hover any event spike to see file, line, trigger action, and code" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hover spike untuk melihat file, baris kode, saat apa, dan potongan kode" } }
+      }
+    },
+    "crash.timeline_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crash & Hang Timeline (Sorted by Priority & Newest)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Timeline Crash & Hang (Urut Priority & Terbaru)" } }
+      }
+    },
+    "crash.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crashlytics & ANR Console" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Konsol Crashlytics & ANR" } }
+      }
+    },
+    "crash.total_events" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Total Events" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Total Event" } }
+      }
+    },
+    "crash.when_action_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "When It Happened (Trigger & Time)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Saat Apa (Trigger & Waktu)" } }
+      }
+    },
+    "crash.where_file_line_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Where in Code (File & Line)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Di File & Kode Mana" } }
+      }
+    },
+    "crash.why_cause_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Why It Crashed (Root Cause)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kenapa Crash (Penyebab Utama)" } }
+      }
+    },
+    "nav.code_review" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Code Review" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Code Review" } }
+      }
+    },
+    "nav.crashlytics" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crashlytics" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Crashlytics" } }
+      }
+    },
+    "nav.monitor_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "MONITOR & DIAGNOSE" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "MONITOR & DIAGNOSA" } }
+      }
+    },
+    "nav.tools_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "BUILD & TOOLS" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "BUILD & UTILITAS" } }
+      }
+    },
+    "overview.need_project_banner" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Connect an Xcode Project folder to enable workspace scanning, code fixes, live refresh, and per-project session storage." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder Project Xcode untuk mengaktifkan scan workspace, perbaikan kode, live refresh, dan penyimpanan data per project." } }
+      }
+    },
+    "overview.need_simulator_banner" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Boot an iOS Simulator first to enable appearance controls, push notification testing, and live process telemetry." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Jalankan (boot) iOS Simulator terlebih dahulu untuk mengaktifkan kontrol tampilan, tes push notification, dan telemetri proses." } }
+      }
+    },
+    "overview.open_dmg_installer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open .dmg Installer" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buka Installer .dmg" } }
+      }
+    },
+    "overview.opened_installer_folder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opened .dmg & Cloud Releases at %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Membuka folder .dmg & Cloud Release di %@" } }
+      }
+    },
+    "overview.quick_jump_hint" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Click any metric card to open its workspace" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Klik kartu metrik untuk membuka halaman terkait" } }
+      }
+    },
+    "overview.session_card_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All Crashlytics, Leaks, Freeze Timelines, and Code Review data are automatically isolated per project." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Seluruh data Crashlytics, Leaks, Grafik Freeze, dan Code Review otomatis disimpan terpisah sesuai project aktif." } }
+      }
+    },
+    "overview.session_card_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active Xcode Project & Cloud Session Backup" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Project Xcode Aktif & Backup Sesi Cloud" } }
+      }
+    },
+    "nav.leaks_and_hangs" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leaks & Hangs" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Leaks & Hangs" } }
+      }
+    },
+    "nav.overview" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overview" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ringkasan" } }
+      }
+    },
+    "nav.simulator" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simulator" } }
+      }
+    },
+    "nav.unit_tests" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unit Tests" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Unit Test" } }
+      }
+    },
+    "nav.utilities" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Utilities" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Utilitas" } }
+      }
+    },
+    "nav.workspaces" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Workspaces" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Workspace" } }
+      }
+    },
+    "overview.backup_exported" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Backup exported to %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Backup diekspor ke %@" } }
+      }
+    },
+    "overview.backup_restored" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restored %lld project session(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld rekaman proyek dipulihkan" } }
+      }
+    },
+    "overview.code_review_findings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Code Review Findings" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Temuan Code Review" } }
+      }
+    },
+    "overview.data_reset_done" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Project data reset" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Semua data proyek direset" } }
+      }
+    },
+    "overview.export_backup" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export Backup" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ekspor Backup" } }
+      }
+    },
+    "overview.reset_confirm_message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete all recorded telemetry, crashlytics, code review, unit test, and L10n data for this project?" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hapus semua rekaman telemetri, crashlytics, code review, unit test, dan L10n untuk proyek ini?" } }
+      }
+    },
+    "overview.reset_project_data" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reset Project Data" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Reset Data Proyek" } }
+      }
+    },
+    "overview.restore_backup" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore Backup" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pulihkan Backup" } }
+      }
+    },
+    "overview.diagnostic_reports_path" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "~/Library/Logs/DiagnosticReports" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "~/Library/Logs/DiagnosticReports" } }
+      }
+    },
+    "overview.hang_crash_reports" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hang / Crash Reports" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Laporan Hang / Crash" } }
+      }
+    },
+    "overview.scan_completed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan complete: %lld active simulator(s), %lld diagnostic report(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Scan selesai: %lld simulator aktif, %lld laporan diagnostik" } }
+      }
+    },
+    "overview.scan_subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Xcode + Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Xcode + Simulator" } }
+      }
+    },
+    "overview.scan_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pindai Proyek" } }
+      }
+    },
+    "overview.scanning_message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scanning simulators, devices, & diagnostic logs..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memindai simulator, perangkat, & log diagnostik..." } }
+      }
+    },
+    "overview.simulators_booted" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Simulators Booted" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simulator Aktif" } }
+      }
+    },
+    "overview.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Inspect active Simulators, hang reports, and UIKit/SwiftUI code findings." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Periksa Simulator aktif, laporan hang, dan temuan kode UIKit/SwiftUI." } }
+      }
+    },
+    "overview.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "iOS Workspace Overview" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ringkasan Workspace iOS" } }
+      }
+    },
+    "overview.total_available" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld total available" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld total tersedia" } }
+      }
+    },
+    "perf.agent_fix_ready" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Agent Fix ready for %@:%lld" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Agent Fix siap untuk %@:%lld" } }
+      }
+    },
+    "perf.agent_picker" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Agent" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Agen" } }
+      }
+    },
+    "perf.apply_patch" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Apply Patch" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terapkan Patch" } }
+      }
+    },
+    "perf.call_tree_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Detected Leaks & Hangs (Call Tree)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Leak & Hang Terdeteksi (Call Tree)" } }
+      }
+    },
+    "perf.cpu_track_idle_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Click Start Live to stream Simulator CPU" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Klik Start Live untuk streaming CPU Simulator" } }
+      }
+    },
+    "perf.cpu_track_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Time Profiler (CPU %)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Time Profiler (CPU %)" } }
+      }
+    },
+    "perf.crash_report_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crashlytics Force-Close Analysis" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Analisis Force-Close Crashlytics" } }
+      }
+    },
+    "perf.culprit_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Culprit Frame" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Frame Penyebab" } }
+      }
+    },
+    "perf.exception_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Exception" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Exception" } }
+      }
+    },
+    "perf.offending_code_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Offending Source Code" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kode Sumber Penyebab" } }
+      }
+    },
+    "perf.raw_log_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Raw Crash Log" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Log Crash Mentah" } }
+      }
+    },
+    "perf.show_system_reports" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System Reports" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Laporan Sistem" } }
+      }
+    },
+    "perf.source_location_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Source Location" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Lokasi File & Baris" } }
+      }
+    },
+    "perf.termination_label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Termination Reason" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Alasan Force Close" } }
+      }
+    },
+    "perf.antigravity_prompt_copied" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Antigravity prompt copied to clipboard (Cmd+V in Antigravity)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Prompt Antigravity disalin ke clipboard (Cmd+V di Antigravity)" } }
+      }
+    },
+    "perf.copy_antigravity_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Antigravity Prompt" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Prompt Antigravity" } }
+      }
+    },
+    "perf.cpu_usage" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "CPU Usage" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Penggunaan CPU" } }
+      }
+    },
+    "perf.diagnostic_reports_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "DiagnosticReports" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "DiagnosticReports" } }
+      }
+    },
+    "perf.empty_selection_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select a finding on the left to view root cause, manual fix steps, Open in Xcode, and diff." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih temuan di kiri untuk melihat penyebab, langkah perbaikan manual, Open in Xcode, dan diff." } }
+      }
+    },
+    "perf.gemini_key_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Gemini API Key (stored securely in macOS Keychain)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gemini API Key (tersimpan aman di macOS Keychain)" } }
+      }
+    },
+    "perf.last_hang" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Last Hang" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hang Terakhir" } }
+      }
+    },
+    "perf.line_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Line %lld" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Baris %lld" } }
+      }
+    },
+    "perf.live_cpu_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live: %.1f%%" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live: %.1f%%" } }
+      }
+    },
+    "perf.live_memory_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live: %.1f MB" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live: %.1f MB" } }
+      }
+    },
+    "perf.live_simulator_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simulator Langsung" } }
+      }
+    },
+    "perf.live_telemetry_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live Simulator Telemetry" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Telemetri Simulator Langsung" } }
+      }
+    },
+    "perf.manual_steps_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Manual Fix Recommendations" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Rekomendasi Perbaikan Manual" } }
+      }
+    },
+    "perf.memory" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Memory" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memori" } }
+      }
+    },
+    "perf.memory_track_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allocations & Memory (MB)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Alokasi & Memori (MB)" } }
+      }
+    },
+    "perf.no_active_sim_process" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active iOS Simulator process. Launch an app in Simulator first." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada proses iOS Simulator aktif. Jalankan app di Simulator terlebih dahulu." } }
+      }
+    },
+    "perf.no_finding_for_xcode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No finding selected to open in Xcode." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada file temuan untuk dibuka di Xcode." } }
+      }
+    },
+    "perf.no_leaks_or_hangs" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No leaks or hangs detected." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada leak atau hang terdeteksi." } }
+      }
+    },
+    "perf.ollama_model_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ollama Model (e.g. qwen2.5-coder:7b)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Model Ollama (mis. qwen2.5-coder:7b)" } }
+      }
+    },
+    "perf.open_in_xcode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open in Xcode (xed)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buka di Xcode (xed)" } }
+      }
+    },
+    "perf.open_instruments" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Instruments" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Instruments" } }
+      }
+    },
+    "perf.patch_applied_to_editor" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Patch applied to code editor" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Patch diterapkan ke editor kode" } }
+      }
+    },
+    "perf.patch_applied_to_file" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Patch applied to %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Patch diterapkan ke %@" } }
+      }
+    },
+    "perf.patch_rolled_back" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Patch rolled back on %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Patch di-rollback pada %@" } }
+      }
+    },
+    "perf.potential_leaks" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Potential Leaks" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Potensi Leak" } }
+      }
+    },
+    "perf.process_picker" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Process" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Proses" } }
+      }
+    },
+    "perf.process_stopped" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Simulator process exited. Live telemetry stopped." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Proses Simulator berhenti. Live telemetry dihentikan." } }
+      }
+    },
+    "perf.refresh_pids" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh PIDs" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Segarkan PID" } }
+      }
+    },
+    "perf.retain_cycles_count" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld potential retain cycle(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld potensi retain cycle" } }
+      }
+    },
+    "perf.root_cause_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Root Cause" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Penyebab Issue" } }
+      }
+    },
+    "perf.clear_freeze_history" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear History" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bersihkan Riwayat" } }
+      }
+    },
+    "perf.click_to_inspect_fix" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Click to inspect & patch in Agent Fix" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Klik untuk inspeksi & patch di Agent Fix" } }
+      }
+    },
+    "perf.dynamic_graph_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Real-Time Dynamic Stream (Live Freeze & Peak Detector)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Grafik Dinamis Real-Time (Detektor Freeze & Peak)" } }
+      }
+    },
+    "perf.freeze_duration_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Freeze %.1fs" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Freeze %.1fd" } }
+      }
+    },
+    "perf.freeze_elapsed_running" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "FREEZE FLATLINE: %.1fs elapsed • %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "FREEZE FLATLINE: %.1fd berjalan • %@" } }
+      }
+    },
+    "perf.freeze_flatline_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "FREEZE / LAG PEAK" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "FREEZE / LAG PEAK" } }
+      }
+    },
+    "perf.inspect_in_agent_fix" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Inspect Fix" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Inspeksi Fix" } }
+      }
+    },
+    "perf.new_badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "NEW" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "BARU" } }
+      }
+    },
+    "perf.no_freeze_captured" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No freeze or lag peaks captured yet. Start Live or scan workspace to record." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Belum ada freeze atau lag peak terekam. Klik Start Live atau scan workspace." } }
+      }
+    },
+    "perf.priority_all" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Semua" } }
+      }
+    },
+    "perf.rss_resident_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "RSS Resident" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "RSS Resident" } }
+      }
+    },
+    "perf.runtime_leaks_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live: %lld (%lld KB)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live: %lld (%lld KB)" } }
+      }
+    },
+    "perf.runtime_leaks_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Runtime Process Leaks" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Leak Proses Runtime" } }
+      }
+    },
+    "perf.runtime_leaks_zero" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "0 runtime leaks detected" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "0 leak runtime terdeteksi" } }
+      }
+    },
+    "perf.static_freeze_graph_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hover any bar to inspect culprit code & duration; click to open in Agent Fix." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hover bar untuk melihat kode penyebab & durasi; klik untuk buka di Agent Fix." } }
+      }
+    },
+    "perf.static_freeze_graph_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Static Freeze & Lag Timeline (Captured Session History)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Grafik Statis Freeze & Lag (Riwayat Sesi Project)" } }
+      }
+    },
+    "perf.static_freeze_stats" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld event(s) • Max %.1fs" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld kejadian • Maks %.1fd" } }
+      }
+    },
+    "perf.sample_hover" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sample #%lld: %.1f%@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Sampel #%lld: %.1f%@" } }
+      }
+    },
+    "perf.sample_latest" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Latest: %.1f%@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terbaru: %.1f%@" } }
+      }
+    },
+    "perf.select_simulator_app" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Simulator App..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih App Simulator..." } }
+      }
+    },
+    "perf.start_live" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start Live" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mulai Live" } }
+      }
+    },
+    "perf.static_call_tree_sub" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Static + Call Tree" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Statis + Call Tree" } }
+      }
+    },
+    "perf.stop_live" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stop Live" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hentikan Live" } }
+      }
+    },
+    "perf.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live Simulator CPU/RAM, hang duration, leak count, jump to Xcode (xed), & Agent fixes." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live CPU/RAM Simulator, durasi hang, jumlah leak, lompat ke Xcode (xed), & solusi Agent." } }
+      }
+    },
+    "perf.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Instruments: Leaks, Hangs & Agent Fix" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Instruments: Leaks, Hangs & Agent Fix" } }
+      }
+    },
+    "perf.undo_patch" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Undo Patch" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Batalkan Patch" } }
+      }
+    },
+    "router.file_not_found" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "File %@ not found in %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "File %@ tidak ditemukan di %@" } }
+      }
+    },
+    "router.open_project_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select iOS Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Proyek iOS" } }
+      }
+    },
+    "router.opened_in_xcode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opened in Xcode: %@:%lld" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Dibuka di Xcode: %@:%lld" } }
+      }
+    },
+    "router.select_project_first" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an Xcode project folder first to open %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder proyek Xcode terlebih dahulu untuk membuka %@" } }
+      }
+    },
+    "simulator.appearance_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Appearance, Accessibility & Capture (UIKit + SwiftUI)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tampilan, Aksesibilitas & Tangkapan (UIKit + SwiftUI)" } }
+      }
+    },
+    "simulator.appearance_updated" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Appearance -> %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tampilan -> %@" } }
+      }
+    },
+    "simulator.bundle_id_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bundle ID (com.company.app)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bundle ID (com.company.app)" } }
+      }
+    },
+    "simulator.clean_status_bar" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clean Status Bar (9:41)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Status Bar Bersih (9:41)" } }
+      }
+    },
+    "simulator.dark_mode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dark Mode" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mode Gelap" } }
+      }
+    },
+    "simulator.deep_link_opened" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opened deep link: %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Deep link dibuka: %@" } }
+      }
+    },
+    "simulator.deep_link_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "myapp://path" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "myapp://path" } }
+      }
+    },
+    "simulator.deep_link_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deep Link / Universal Link Tester" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Penguji Deep Link / Universal Link" } }
+      }
+    },
+    "simulator.dynamic_type_size" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dynamic Type Size" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ukuran Dynamic Type" } }
+      }
+    },
+    "simulator.dynamic_type_updated" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dynamic Type -> %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Dynamic Type -> %@" } }
+      }
+    },
+    "simulator.live_reload_failed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Incremental build failed" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Incremental build gagal" } }
+      }
+    },
+    "simulator.live_reload_scheme_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "App Scheme (optional for Simulator relaunch)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Scheme App (opsional untuk relaunch Simulator)" } }
+      }
+    },
+    "simulator.live_reload_stopped" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live Refresh stopped" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live Refresh dihentikan" } }
+      }
+    },
+    "simulator.live_reload_subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watch .swift files -> auto-refresh Code Review/L10n & incremental Simulator relaunch." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pantau file .swift -> auto-refresh Code Review/L10n & incremental relaunch Simulator." } }
+      }
+    },
+    "simulator.live_reload_succeeded" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refreshed Simulator after editing %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simulator di-refresh setelah edit %@" } }
+      }
+    },
+    "simulator.live_reload_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live Refresh (Save-to-Reload Simulator)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Live Refresh (Simpan-untuk-Reload Simulator)" } }
+      }
+    },
+    "simulator.live_reload_triggered" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Detected change in %@ — refreshing..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Perubahan terdeteksi di %@ — me-refresh..." } }
+      }
+    },
+    "simulator.live_reload_watching" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watching Swift files in %@..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Memantau file Swift di %@..." } }
+      }
+    },
+    "simulator.start_live_reload" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start Live Refresh" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mulai Live Refresh" } }
+      }
+    },
+    "simulator.stop_live_reload" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stop Live Refresh" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hentikan Live Refresh" } }
+      }
+    },
+    "simulator.light_mode" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Light Mode" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mode Terang" } }
+      }
+    },
+    "simulator.open_url" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open URL" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buka URL" } }
+      }
+    },
+    "simulator.push_body_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification body" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Isi notifikasi" } }
+      }
+    },
+    "simulator.push_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Push Notification (.apns) Tester" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Penguji Push Notification (.apns)" } }
+      }
+    },
+    "simulator.push_sent" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Push sent to %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Push terkirim ke %@" } }
+      }
+    },
+    "simulator.push_title_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification title" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Judul notifikasi" } }
+      }
+    },
+    "simulator.refresh_devices" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh Devices" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Segarkan Perangkat" } }
+      }
+    },
+    "simulator.screenshot_copied" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot copied to clipboard (%@)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot disalin ke clipboard (%@)" } }
+      }
+    },
+    "simulator.screenshot_failed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to capture screenshot" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gagal mengambil screenshot" } }
+      }
+    },
+    "simulator.screenshot_to_clipboard" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot to Clipboard" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot ke Clipboard" } }
+      }
+    },
+    "simulator.send_push" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send Push to Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kirim Push ke Simulator" } }
+      }
+    },
+    "simulator.status_bar_overridden" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Status bar overridden (9:41, 100%)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Status bar di-override (9:41, 100%)" } }
+      }
+    },
+    "simulator.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Simulator Quick Controls" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kontrol Cepat Simulator" } }
+      }
+    },
+    "topbar.active_device_target" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active Target" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Target Aktif" } }
+      }
+    },
+    "topbar.clean_bar_short" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "9:41" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "9:41" } }
+      }
+    },
+    "topbar.device_connected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Connected" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terhubung" } }
+      }
+    },
+    "topbar.device_paired" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Paired" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terpasang" } }
+      }
+    },
+    "topbar.physical_devices_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Real Physical Devices (iPhone / iPad)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Perangkat Fisik Asli (iPhone / iPad)" } }
+      }
+    },
+    "topbar.simulators_section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "iOS Simulators (Booted)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "iOS Simulator (Aktif)" } }
+      }
+    },
+    "topbar.use_device_target" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select Target" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih Target" } }
+      }
+    },
+    "topbar.dark_short" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dark" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gelap" } }
+      }
+    },
+    "topbar.light_short" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Light" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Terang" } }
+      }
+    },
+    "topbar.no_booted_simulator" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Booted Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak Ada Simulator Aktif" } }
+      }
+    },
+    "topbar.physical_devices_count" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld Physical iPhone(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld iPhone Fisik" } }
+      }
+    },
+    "topbar.quick_simulator" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quick Simulator" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simulator Cepat" } }
+      }
+    },
+    "topbar.theme_and_bg" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme & BG" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tema & Latar" } }
+      }
+    },
+    "unittest.approve_and_write" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "3. Approve & Write to Project" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "3. Setujui & Tulis ke Proyek" } }
+      }
+    },
+    "unittest.build_plan" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Build Placement Plan" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buat Placement Plan" } }
+      }
+    },
+    "unittest.destination_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Destination (e.g. platform=iOS Simulator,name=iPhone 16)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Destinasi (mis. platform=iOS Simulator,name=iPhone 16)" } }
+      }
+    },
+    "unittest.detect_schemes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Detect Schemes" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Deteksi Scheme" } }
+      }
+    },
+    "unittest.detect_schemes_failed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to detect schemes" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gagal mendeteksi scheme" } }
+      }
+    },
+    "unittest.detecting_schemes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Detecting schemes from %@..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mendeteksi scheme dari %@..." } }
+      }
+    },
+    "unittest.framework_picker" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Framework" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Framework" } }
+      }
+    },
+    "unittest.load_swift" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Load .swift" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Muat .swift" } }
+      }
+    },
+    "unittest.module_name_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Module Name (@testable import ...)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Nama Modul (@testable import ...)" } }
+      }
+    },
+    "unittest.no_file_loaded" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No file loaded" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Belum ada file" } }
+      }
+    },
+    "unittest.plan_ready" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Placement Plan ready for review (%lld operation(s))" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Placement Plan siap direview (%lld operasi)" } }
+      }
+    },
+    "unittest.preview_empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Click 'Build Placement Plan' to preview file placement & generated tests before writing to disk." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Klik 'Buat Placement Plan' untuk meninjau lokasi file & preview kode test sebelum ditulis ke proyek." } }
+      }
+    },
+    "unittest.preview_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview: Generated Test Suite" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pratinjau: Test Suite" } }
+      }
+    },
+    "unittest.project_path_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "/path/to/App.xcodeproj or .xcworkspace" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "/path/ke/App.xcodeproj atau .xcworkspace" } }
+      }
+    },
+    "unittest.review_plan_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "2. Review Placement Plan (%@)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "2. Tinjau Placement Plan (%@)" } }
+      }
+    },
+    "unittest.run_section_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run Tests Directly via xcodebuild (Simulator / Real Device)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Jalankan Test Langsung via xcodebuild (Simulator / Perangkat)" } }
+      }
+    },
+    "unittest.run_xcodebuild_test" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run xcodebuild test" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Jalankan xcodebuild test" } }
+      }
+    },
+    "unittest.running_tests" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Running xcodebuild test (%@)..." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Menjalankan xcodebuild test (%@)..." } }
+      }
+    },
+    "unittest.scheme_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scheme" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Scheme" } }
+      }
+    },
+    "unittest.schemes_found" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Found %lld scheme(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ditemukan %lld scheme" } }
+      }
+    },
+    "unittest.select_project_to_write" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an Xcode project folder in the top bar to write test files to disk." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder proyek Xcode di bar atas untuk menulis file test ke disk." } }
+      }
+    },
+    "unittest.source_file_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "1. Source Swift File (%@)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "1. File Sumber Swift (%@)" } }
+      }
+    },
+    "unittest.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "1. Scan Swift  2. Review Placement Plan  3. Approve, Write & Run" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "1. Pindai Swift  2. Tinjau Placement Plan  3. Setujui, Tulis & Jalankan" } }
+      }
+    },
+    "unittest.test_file_written" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Test file written to %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "File test ditulis ke %@" } }
+      }
+    },
+    "unittest.tests_failed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "xcodebuild test failed" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "xcodebuild test gagal" } }
+      }
+    },
+    "unittest.tests_passed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "xcodebuild test succeeded" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "xcodebuild test berhasil" } }
+      }
+    },
+    "unittest.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unit Test Agent" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Agen Unit Test" } }
+      }
+    },
+    "utilities.clean_derived_data" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clean DerivedData" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bersihkan DerivedData" } }
+      }
+    },
+    "utilities.color_token_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Color Token Generator (UIColor + SwiftUI Color)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Generator Token Warna (UIColor + SwiftUI Color)" } }
+      }
+    },
+    "utilities.derived_data_cleaned" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "DerivedData cleaned (%lld folder(s))" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "DerivedData dibersihkan (%lld folder)" } }
+      }
+    },
+    "utilities.derived_data_count" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld build folder(s) stored" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld folder build tersimpan" } }
+      }
+    },
+    "utilities.derived_data_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Xcode DerivedData" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Xcode DerivedData" } }
+      }
+    },
+    "utilities.generate" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Generate" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buat" } }
+      }
+    },
+    "utilities.l10n_empty_prompt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an Xcode project folder in the top bar then click Scan Project." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pilih folder proyek Xcode di bar atas lalu klik Pindai Proyek." } }
+      }
+    },
+    "utilities.l10n_scan_completed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "L10n scan completed: %lld incomplete key(s)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Scan L10n selesai: %lld key belum lengkap" } }
+      }
+    },
+    "utilities.l10n_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Localization (.xcstrings) Inspector" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Inspektor Lokalisasi (.xcstrings)" } }
+      }
+    },
+    "utilities.missing_languages" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Missing: %@" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kurang: %@" } }
+      }
+    },
+    "utilities.refresh_size" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh Size" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Segarkan Ukuran" } }
+      }
+    },
+    "utilities.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "iOS FE Utilities (Tokens, L10n & DerivedData)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Utilitas iOS FE (Token, L10n & DerivedData)" } }
+      }
+    },
+    "utilities.token_hex_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hex (e.g. #28D796)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hex (mis. #28D796)" } }
+      }
+    },
+    "utilities.token_name_placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Token Name (e.g. brandPrimary)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Nama Token (mis. brandPrimary)" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
