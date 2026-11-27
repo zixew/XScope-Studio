@@ -136,7 +136,18 @@ final class SimulatorPresenter {
         }
     }
     var visibleNodeLimit: Int = ProgressiveListChunker.defaultPageSize
-    var selectedNodeID: String?
+    var selectedNodeID: String? {
+        didSet {
+            if oldValue != selectedNodeID {
+                loadDraftForSelection()
+            }
+        }
+    }
+    var draftNode: UIComponentNode?
+    var originalSourceSlice: String = ""
+    var draftSourceSlice: String = ""
+    var isDebugBridgeConnected: Bool = false
+    var lastActionStatus: String = ""
     var liveScreenImagePath: String?
     var liveScreenCGImage: CGImage?
     var preCroppedTextures: [String: CGImage] = [:]
@@ -181,6 +192,8 @@ final class SimulatorPresenter {
     private let onProjectFilesChanged: @MainActor () -> Void
     private let deepLinkStore = DeepLinkPresetStore()
     private let sandboxService = SimulatorSandboxService()
+    private let bridgeService = XScopeDebugBridgeService()
+    private let hierarchyInspector = UIHierarchyInspectorService()
     private var logBuffer = SimulatorLogRingBuffer(maxCapacity: AppPreferencesStore().load().logBufferCapacity)
     private var logStreamProcess: Process?
     private var videoRecordProcess: Process?
@@ -376,6 +389,158 @@ final class SimulatorPresenter {
         cameraResetCounter += 1
     }
 
+    var hasUnappliedChanges: Bool {
+        guard let selected = selectedNode, let draft = draftNode else { return false }
+        return selected != draft || draftSourceSlice != originalSourceSlice
+    }
+
+    func inspectNode(_ id: String) {
+        selectedNodeID = id
+    }
+
+    func loadDraftForSelection() {
+        guard var node = selectedNode else {
+            draftNode = nil
+            originalSourceSlice = ""
+            draftSourceSlice = ""
+            return
+        }
+        let resolvedPath = node.filePath ?? router.projectURL.flatMap { router.findFile(named: node.fileName, in: $0)?.path }
+        if let path = resolvedPath,
+           let fullSource = try? String(contentsOfFile: path, encoding: .utf8) {
+            if node.actions.isEmpty {
+                node.actions = hierarchyInspector.discoverActions(in: fullSource, componentName: node.name)
+            }
+            if node.constraints == ComponentConstraints() {
+                node.constraints = hierarchyInspector.parseConstraints(in: fullSource, aroundLine: node.lineNumber)
+            }
+            let slice = hierarchyInspector.loadSurroundingSource(filePath: path, lineNumber: node.lineNumber, radius: 14) ?? node.codeSnippet
+            originalSourceSlice = slice
+            draftSourceSlice = slice
+        } else {
+            originalSourceSlice = node.codeSnippet
+            draftSourceSlice = node.codeSnippet
+        }
+        draftNode = node
+    }
+
+    func applyDraftToPreview() {
+        guard let idx = selectedNodeIndex, var draft = draftNode else { return }
+        draft.isEdited = true
+        componentNodes[idx] = draft
+        draftNode = draft
+        router.statusMessage = "Applied preview for \(draft.name)"
+        Task {
+            if await bridgeService.pingBridge() {
+                isDebugBridgeConnected = true
+                _ = await bridgeService.sendMutation(node: draft)
+            }
+        }
+    }
+
+    func discardDraft() {
+        draftNode = selectedNode
+        draftSourceSlice = originalSourceSlice
+        router.statusMessage = "Discarded unapplied draft"
+    }
+
+    func applyDirectCodeToXcode() {
+        guard let idx = selectedNodeIndex else { return }
+        let node = componentNodes[idx]
+        let filePath = node.filePath ?? router.projectURL.flatMap { router.findFile(named: node.fileName, in: $0)?.path }
+        guard let path = filePath else {
+            router.statusMessage = AppStrings.Performance.noFindingForXcode
+            return
+        }
+        guard draftSourceSlice != originalSourceSlice else {
+            applyComponentChangesToSwiftCode()
+            return
+        }
+        do {
+            let record = try interactor.applyComponentPatch(
+                to: URL(fileURLWithPath: path),
+                oldSnippet: originalSourceSlice,
+                newSnippet: draftSourceSlice,
+                lineNumber: node.lineNumber
+            )
+            lastComponentRevertRecord = record
+            originalSourceSlice = draftSourceSlice
+            router.statusMessage = AppStrings.Performance.patchAppliedToFile(node.fileName)
+        } catch {
+            router.statusMessage = error.localizedDescription
+        }
+    }
+
+    func checkBridgeStatus() async {
+        isDebugBridgeConnected = await bridgeService.pingBridge()
+    }
+
+    func invokeActionViaBridge(_ action: ComponentActionBinding) async {
+        let ok = await bridgeService.invokeAction(selectorName: action.selectorName, targetName: selectedNode?.name ?? "")
+        if ok {
+            isDebugBridgeConnected = true
+        } else {
+            isDebugBridgeConnected = await bridgeService.pingBridge()
+        }
+        if ok {
+            lastActionStatus = "Invoked `\(action.selectorName)` in live app"
+            router.statusMessage = lastActionStatus
+        } else {
+            lastActionStatus = "Bridge offline — install XScopeDebugBridge.swift or use Simulator Tap"
+            router.statusMessage = lastActionStatus
+        }
+    }
+
+    func triggerComponentTapInSimulator() async {
+        guard let node = draftNode ?? selectedNode else { return }
+        let centerX = node.normalizedX + node.normalizedWidth / 2.0
+        let centerY = node.normalizedY + node.normalizedHeight / 2.0
+        let script = """
+        tell application "Simulator" to activate
+        tell application "System Events"
+            tell process "Simulator"
+                if (count of windows) > 0 then
+                    set wPos to position of window 1
+                    set wSize to size of window 1
+                    set tapX to (item 1 of wPos) + ((item 1 of wSize) * \(String(format: "%.3f", centerX)))
+                    set tapY to (item 2 of wPos) + ((item 2 of wSize) * \(String(format: "%.3f", centerY)))
+                    click at {tapX, tapY}
+                end if
+            end tell
+        end tell
+        """
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        proc.arguments = ["-e", script]
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            lastActionStatus = proc.terminationStatus == 0
+                ? "Tapped \(node.name) at (\(Int(centerX * 100))%, \(Int(centerY * 100))%)"
+                : "Simulator tap requires Accessibility permission"
+        } catch {
+            lastActionStatus = error.localizedDescription
+        }
+        router.statusMessage = lastActionStatus
+    }
+
+    func installDebugBridgeInProject() {
+        guard let root = router.projectURL else {
+            router.statusMessage = AppStrings.Common.selectProjectFirst
+            return
+        }
+        let dest = root.appendingPathComponent("XScopeDebugBridge.swift")
+        let source = XScopeDebugBridgeService.generateBridgeSwiftSource()
+        do {
+            try source.write(to: dest, atomically: true, encoding: .utf8)
+            clipboard.copyString("XScopeDebugBridge.shared.start()")
+            lastActionStatus = "Created XScopeDebugBridge.swift & copied start() call"
+            router.statusMessage = lastActionStatus
+        } catch {
+            router.statusMessage = error.localizedDescription
+        }
+    }
+
     func openSelectedComponentInXcode() async {
         guard let node = selectedNode else { return }
         await router.openInXcode(fileName: node.fileName, line: node.lineNumber)
@@ -383,6 +548,11 @@ final class SimulatorPresenter {
 
     func applyComponentChangesToSwiftCode() {
         guard let idx = selectedNodeIndex else { return }
+        if var draft = draftNode {
+            draft.isEdited = true
+            componentNodes[idx] = draft
+            draftNode = draft
+        }
         let node = componentNodes[idx]
         let filePath = node.filePath ?? router.projectURL.flatMap { router.findFile(named: node.fileName, in: $0)?.path }
         guard let path = filePath else {

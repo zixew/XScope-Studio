@@ -349,171 +349,8 @@ struct SimulatorControlsView: View {
                         }
                     }
 
-                    // Right Column: Selected Component Code Inspector & Live Property Editor
-                    GlassCard {
-                        if let idx = presenter.selectedNodeIndex, idx < presenter.componentNodes.count {
-                            let node = presenter.componentNodes[idx]
-                            VStack(alignment: .leading, spacing: 10) {
-                                // 1. Component Header + 1-Click Open in Xcode
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 6) {
-                                            Text("Z\(node.zLayer)")
-                                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(Color(hex: node.accentHex).opacity(0.25))
-                                                .foregroundStyle(Color(hex: node.accentHex))
-                                                .clipShape(Capsule())
-                                            Text(node.name)
-                                                .font(.system(size: 13, weight: .bold))
-                                                .foregroundStyle(CompanionTheme.textPrimary)
-                                                .lineLimit(1)
-                                        }
-                                        Text("\(node.kind.rawValue) • \(node.locationLabel)")
-                                            .font(.system(size: 10, design: .monospaced))
-                                            .foregroundStyle(CompanionTheme.mint)
-                                    }
-                                    Spacer()
-                                    Button(AppStrings.Performance.openInXcode) {
-                                        Task { await presenter.openSelectedComponentInXcode() }
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .controlSize(.small)
-                                    .disabled(!presenter.hasProject)
-                                }
-
-                                // 2. Source Code Snippet in Xcode
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Swift Source (\(node.locationLabel))")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(CompanionTheme.textSecondary)
-                                    XcodeCodeText(code: node.codeSnippet, fontSize: 10.5)
-                                        .padding(8)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.black.opacity(0.35))
-                                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                                }
-
-                                Divider()
-
-                                // 3. Live Component Property Editor (Updates 2D/3D Render Live!)
-                                Text("Live Component Editor")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(CompanionTheme.textPrimary)
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text("Text / Title")
-                                            .font(.system(size: 10))
-                                            .foregroundStyle(CompanionTheme.textSecondary)
-                                        TextField("Component Text", text: $presenter.componentNodes[idx].displayText)
-                                            .textFieldStyle(.roundedBorder)
-                                            .font(.system(size: 11))
-                                            .onChange(of: presenter.componentNodes[idx].displayText) { _, _ in
-                                                presenter.componentNodes[idx].isEdited = true
-                                            }
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text("Accent / Fill Color")
-                                                .font(.system(size: 10))
-                                                .foregroundStyle(CompanionTheme.textSecondary)
-                                            Spacer()
-                                            TextField("#HEX", text: $presenter.componentNodes[idx].accentHex)
-                                                .textFieldStyle(.roundedBorder)
-                                                .font(.system(size: 10, design: .monospaced))
-                                                .frame(width: 85)
-                                                .onChange(of: presenter.componentNodes[idx].accentHex) { _, _ in
-                                                    presenter.componentNodes[idx].isEdited = true
-                                                }
-                                        }
-                                        HStack(spacing: 6) {
-                                            ForEach(["#007AFF", "#1C7ED6", "#20C997", "#F59F00", "#FF6B6B", "#7950F2"], id: \.self) { preset in
-                                                Button {
-                                                    presenter.componentNodes[idx].accentHex = preset
-                                                    presenter.componentNodes[idx].isEdited = true
-                                                } label: {
-                                                    Circle()
-                                                        .fill(Color(hex: preset))
-                                                        .frame(width: 18, height: 18)
-                                                        .overlay(
-                                                            Circle()
-                                                                .stroke(presenter.componentNodes[idx].accentHex == preset ? Color.white : .clear, lineWidth: 1.5)
-                                                        )
-                                                }
-                                                .buttonStyle(.plain)
-                                            }
-                                        }
-                                    }
-
-                                    HStack {
-                                        Text("Corner Radius: \(Int(presenter.componentNodes[idx].cornerRadius))pt")
-                                            .font(.system(size: 10, design: .monospaced))
-                                            .foregroundStyle(CompanionTheme.textSecondary)
-                                        Spacer()
-                                        Slider(value: $presenter.componentNodes[idx].cornerRadius, in: 0...32)
-                                            .frame(width: 120)
-                                            .onChange(of: presenter.componentNodes[idx].cornerRadius) { _, _ in
-                                                presenter.componentNodes[idx].isEdited = true
-                                            }
-                                    }
-
-                                    HStack {
-                                        Text("Font Size: \(Int(presenter.componentNodes[idx].fontSize))pt")
-                                            .font(.system(size: 10, design: .monospaced))
-                                            .foregroundStyle(CompanionTheme.textSecondary)
-                                        Spacer()
-                                        Slider(value: $presenter.componentNodes[idx].fontSize, in: 9...24)
-                                            .frame(width: 120)
-                                            .onChange(of: presenter.componentNodes[idx].fontSize) { _, _ in
-                                                presenter.componentNodes[idx].isEdited = true
-                                            }
-                                    }
-
-                                    HStack {
-                                        Text("Opacity: \(Int(presenter.componentNodes[idx].opacity * 100))%")
-                                            .font(.system(size: 10, design: .monospaced))
-                                            .foregroundStyle(CompanionTheme.textSecondary)
-                                        Spacer()
-                                        Slider(value: $presenter.componentNodes[idx].opacity, in: 0.15...1.0)
-                                            .frame(width: 120)
-                                    }
-
-                                    Toggle("Hide Component Layer", isOn: $presenter.componentNodes[idx].isHidden)
-                                        .toggleStyle(.checkbox)
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(CompanionTheme.textSecondary)
-                                }
-
-                                    FlowLayout(spacing: 8) {
-                                        Button("Apply to Swift Code") {
-                                            presenter.applyComponentChangesToSwiftCode()
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .controlSize(.small)
-                                        .disabled(!presenter.hasProject)
-                                        .preventSquish()
-
-                                        if presenter.lastComponentRevertRecord != nil {
-                                            Button(AppStrings.Performance.undoPatch) {
-                                                presenter.undoLastComponentPatch()
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .controlSize(.small)
-                                            .preventSquish()
-                                        }
-                                    }
-                                }
-                            } else {
-                                Text("Tap any component in the 2D/3D canvas or hierarchy tree to inspect its Swift code and edit properties live.")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(CompanionTheme.textSecondary)
-                                    .frame(maxWidth: .infinity, minHeight: 430, alignment: .center)
-                            }
-                        }
-                        .frame(minWidth: 240, idealWidth: 290, maxWidth: 320)
+                    // Right Column: Safe Draft-First 5-Tab XIB Inspector
+                    SimulatorXIBInspectorPane(presenter: presenter)
                 }
             }
         }
@@ -572,13 +409,29 @@ struct SimulatorControlsView: View {
                 }
 
                 // Interactive Component Nodes on this plane (renders real cropped iPhone/Simulator pixels in 3D!)
-                ForEach(visibleNodes) { node in
-                    let isSelected = presenter.selectedNode?.id == node.id
+                ForEach(visibleNodes) { rawNode in
+                    let isSelected = presenter.selectedNode?.id == rawNode.id
+                    let node = (isSelected ? presenter.draftNode : nil) ?? rawNode
                     let nodeX = CGFloat(node.normalizedX) * w
                     let nodeY = CGFloat(node.normalizedY) * h
                     let nodeW = max(24, CGFloat(node.normalizedWidth) * w)
                     let nodeH = max(18, CGFloat(node.normalizedHeight) * h)
                     let tint = Color(hex: node.accentHex)
+
+                    if isSelected {
+                        // AutoLayout Constraint Guides in 2D Canvas
+                        Path { p in
+                            p.move(to: CGPoint(x: 0, y: nodeY + nodeH / 2))
+                            p.addLine(to: CGPoint(x: nodeX, y: nodeY + nodeH / 2))
+                            p.move(to: CGPoint(x: nodeX + nodeW, y: nodeY + nodeH / 2))
+                            p.addLine(to: CGPoint(x: w, y: nodeY + nodeH / 2))
+                            p.move(to: CGPoint(x: nodeX + nodeW / 2, y: 0))
+                            p.addLine(to: CGPoint(x: nodeX + nodeW / 2, y: nodeY))
+                            p.move(to: CGPoint(x: nodeX + nodeW / 2, y: nodeY + nodeH))
+                            p.addLine(to: CGPoint(x: nodeX + nodeW / 2, y: h))
+                        }
+                        .stroke(CompanionTheme.accent.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                    }
 
                     Button {
                         withAnimation(.snappy) {
@@ -586,7 +439,7 @@ struct SimulatorControlsView: View {
                         }
                     } label: {
                         ZStack {
-                            if node.isEdited && node.kind != .window {
+                            if (node.isEdited || (isSelected && presenter.hasUnappliedChanges)) && node.kind != .window {
                                 RoundedRectangle(cornerRadius: node.cornerRadius)
                                     .fill(tint.opacity(0.92))
                                     .overlay(
@@ -1188,7 +1041,7 @@ struct SimulatorControlsView: View {
     }
 }
 
-private extension Color {
+extension Color {
     init(hex: String) {
         let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

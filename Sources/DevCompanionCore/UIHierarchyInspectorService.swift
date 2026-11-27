@@ -2,6 +2,68 @@ import Foundation
 import Vision
 import ImageIO
 
+public struct ComponentConstraints: Sendable, Equatable, Codable {
+    public var leading: Double?
+    public var trailing: Double?
+    public var top: Double?
+    public var bottom: Double?
+    public var width: Double?
+    public var height: Double?
+    public var centerX: Double?
+    public var centerY: Double?
+
+    public init(
+        leading: Double? = nil,
+        trailing: Double? = nil,
+        top: Double? = nil,
+        bottom: Double? = nil,
+        width: Double? = nil,
+        height: Double? = nil,
+        centerX: Double? = nil,
+        centerY: Double? = nil
+    ) {
+        self.leading = leading
+        self.trailing = trailing
+        self.top = top
+        self.bottom = bottom
+        self.width = width
+        self.height = height
+        self.centerX = centerX
+        self.centerY = centerY
+    }
+}
+
+public struct ComponentActionBinding: Identifiable, Sendable, Equatable, Codable {
+    public enum ActionKind: String, Sendable, Codable {
+        case ibAction = "@IBAction"
+        case addTarget = "addTarget (#selector)"
+        case gesture = "Gesture Recognizer"
+        case swiftUIButton = "SwiftUI Action"
+    }
+
+    public let id: String
+    public let name: String
+    public let kind: ActionKind
+    public let selectorName: String
+    public let lineNumber: Int
+    public let bodySnippet: String
+
+    public init(
+        name: String,
+        kind: ActionKind,
+        selectorName: String,
+        lineNumber: Int,
+        bodySnippet: String
+    ) {
+        self.id = "\(kind.rawValue)::\(selectorName):\(lineNumber)"
+        self.name = name
+        self.kind = kind
+        self.selectorName = selectorName
+        self.lineNumber = lineNumber
+        self.bodySnippet = bodySnippet
+    }
+}
+
 public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
     public enum Kind: String, Sendable, CaseIterable, Codable {
         case window = "Window / Root"
@@ -52,10 +114,18 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
     // Live editable visual properties
     public var displayText: String
     public var accentHex: String
+    public var backgroundHex: String
+    public var borderHex: String
+    public var borderWidth: Double
     public var cornerRadius: Double
     public var fontSize: Double
+    public var fontWeight: String
     public var opacity: Double
     public var isHidden: Bool
+    public var clipsToBounds: Bool
+    public var isUserInteractionEnabled: Bool
+    public var constraints: ComponentConstraints
+    public var actions: [ComponentActionBinding]
     public var isEdited: Bool
 
     public init(
@@ -73,10 +143,18 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
         codeSnippet: String,
         displayText: String = "",
         accentHex: String = "#0A84FF",
+        backgroundHex: String = "#161B26",
+        borderHex: String = "#334155",
+        borderWidth: Double = 0,
         cornerRadius: Double = 12,
         fontSize: Double = 14,
+        fontWeight: String = "Regular",
         opacity: Double = 1.0,
         isHidden: Bool = false,
+        clipsToBounds: Bool = true,
+        isUserInteractionEnabled: Bool = true,
+        constraints: ComponentConstraints = ComponentConstraints(),
+        actions: [ComponentActionBinding] = [],
         isEdited: Bool = false
     ) {
         self.id = id ?? "\(fileName):\(lineNumber):\(name)"
@@ -93,10 +171,18 @@ public struct UIComponentNode: Identifiable, Sendable, Equatable, Codable {
         self.codeSnippet = codeSnippet
         self.displayText = displayText.isEmpty ? name : displayText
         self.accentHex = accentHex
+        self.backgroundHex = backgroundHex
+        self.borderHex = borderHex
+        self.borderWidth = borderWidth
         self.cornerRadius = cornerRadius
         self.fontSize = fontSize
+        self.fontWeight = fontWeight
         self.opacity = opacity
         self.isHidden = isHidden
+        self.clipsToBounds = clipsToBounds
+        self.isUserInteractionEnabled = isUserInteractionEnabled
+        self.constraints = constraints
+        self.actions = actions
         self.isEdited = isEdited
     }
 
@@ -659,7 +745,7 @@ public struct UIHierarchyInspectorService: Sendable {
         return ns.substring(with: match.range(at: 1))
     }
 
-    /// Generates an updated Swift line/snippet reflecting the user's live component edits (text, cornerRadius, opacity, hidden) so it can be patched directly into the source file.
+    /// Generates an updated Swift line/snippet reflecting the user's XIB & constraint edits so it can be patched directly into the source file.
     public func buildCodePatch(for node: UIComponentNode) -> (oldSnippet: String, newSnippet: String) {
         let old = node.codeSnippet
         var updated = old
@@ -670,10 +756,200 @@ public struct UIHierarchyInspectorService: Sendable {
             updated = updated.replacingOccurrences(of: "\"\(existingLiteral)\"", with: "\"\(node.displayText)\"")
         }
 
+        updated = Self.replaceNumericArg(in: updated, label: "cornerRadius", value: node.cornerRadius)
+        updated = Self.replaceNumericArg(in: updated, label: "borderWidth", value: node.borderWidth)
+        updated = Self.replaceNumericArg(in: updated, label: "alpha", value: node.opacity, decimals: 2)
+        updated = Self.replaceBoolArg(in: updated, label: "isHidden", value: node.isHidden)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "leadingAnchor", value: node.constraints.leading)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "trailingAnchor", value: node.constraints.trailing)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "topAnchor", value: node.constraints.top)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "bottomAnchor", value: node.constraints.bottom)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "widthAnchor", value: node.constraints.width)
+        updated = Self.replaceConstraintConstant(in: updated, anchor: "heightAnchor", value: node.constraints.height)
+
         if updated == old {
-            updated = "\(old) // [Live UI Edit: text=\"\(node.displayText)\", color=\(node.accentHex), radius=\(Int(node.cornerRadius)), font=\(Int(node.fontSize)), opacity=\(String(format: "%.2f", node.opacity))]"
+            var extras: [String] = []
+            if node.cornerRadius > 0 { extras.append("radius=\(Int(node.cornerRadius))") }
+            if node.borderWidth > 0 { extras.append("border=\(String(format: "%.1f", node.borderWidth))") }
+            if let l = node.constraints.leading { extras.append("leading=\(Int(l))") }
+            if let t = node.constraints.top { extras.append("top=\(Int(t))") }
+            if let w = node.constraints.width { extras.append("w=\(Int(w))") }
+            if let h = node.constraints.height { extras.append("h=\(Int(h))") }
+            let summary = extras.isEmpty ? "text=\"\(node.displayText)\", color=\(node.accentHex)" : extras.joined(separator: ", ")
+            updated = "\(old) // [XScope XIB: \(summary)]"
         }
         return (old, updated)
+    }
+
+    public func loadSurroundingSource(filePath: String?, lineNumber: Int, radius: Int = 18) -> String? {
+        guard let filePath,
+              let content = try? String(contentsOfFile: filePath, encoding: .utf8) else {
+            return nil
+        }
+        let lines = content.components(separatedBy: .newlines)
+        guard !lines.isEmpty else { return nil }
+        let start = max(1, lineNumber - radius)
+        let end = min(lines.count, lineNumber + radius)
+        guard start <= end else { return nil }
+        return lines[(start - 1)...(end - 1)].joined(separator: "\n")
+    }
+
+    public func parseConstraints(in source: String, aroundLine: Int? = nil) -> ComponentConstraints {
+        var result = ComponentConstraints()
+        let lines = source.components(separatedBy: .newlines)
+        let window: ArraySlice<String>
+        if let line = aroundLine, line > 0 {
+            let s = max(0, line - 25)
+            let e = min(lines.count, line + 35)
+            window = lines[s..<e]
+        } else {
+            window = lines[0..<lines.count]
+        }
+
+        for raw in window {
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "leadingAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "leading") {
+                result.leading = result.leading ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "trailingAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "trailing") {
+                result.trailing = result.trailing ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "topAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "top") {
+                result.top = result.top ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "bottomAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "bottom") {
+                result.bottom = result.bottom ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "widthAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "width") {
+                result.width = result.width ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "heightAnchor") ?? Self.extractSnapKitConstant(in: raw, edge: "height") {
+                result.height = result.height ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "centerXAnchor") {
+                result.centerX = result.centerX ?? val
+            }
+            if let val = Self.extractConstraintConstant(in: raw, anchor: "centerYAnchor") {
+                result.centerY = result.centerY ?? val
+            }
+        }
+        return result
+    }
+
+    public func discoverActions(in source: String, componentName: String? = nil) -> [ComponentActionBinding] {
+        let lines = source.components(separatedBy: .newlines)
+        var found: [ComponentActionBinding] = []
+        var seen: Set<String> = []
+
+        for (idx, raw) in lines.enumerated() {
+            let lineNo = idx + 1
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+
+            // 1. @IBAction func foo(_ sender: Any)
+            if trimmed.contains("@IBAction"), let fn = Self.extractFuncName(in: trimmed) {
+                let snippet = Self.sliceFunctionBody(lines: lines, startIndex: idx)
+                let key = "ib::\(fn)"
+                if seen.insert(key).inserted {
+                    found.append(ComponentActionBinding(name: fn, kind: .ibAction, selectorName: fn, lineNumber: lineNo, bodySnippet: snippet))
+                }
+            }
+
+            // 2. .addTarget(..., action: #selector(foo))
+            if trimmed.contains("addTarget("), let sel = Self.extractSelectorName(in: trimmed) {
+                let key = "target::\(sel)"
+                if seen.insert(key).inserted {
+                    found.append(ComponentActionBinding(name: sel, kind: .addTarget, selectorName: sel, lineNumber: lineNo, bodySnippet: trimmed))
+                }
+            }
+
+            // 3. UITapGestureRecognizer(target: ..., action: #selector(foo))
+            if trimmed.contains("GestureRecognizer"), let sel = Self.extractSelectorName(in: trimmed) {
+                let key = "gesture::\(sel)"
+                if seen.insert(key).inserted {
+                    found.append(ComponentActionBinding(name: sel, kind: .gesture, selectorName: sel, lineNumber: lineNo, bodySnippet: trimmed))
+                }
+            }
+
+            // 4. SwiftUI Button(action: ...) or Button("Title") { ... }
+            if trimmed.hasPrefix("Button(") || trimmed.contains(" Button(") {
+                let snippet = Self.sliceFunctionBody(lines: lines, startIndex: idx)
+                let label = Self.extractQuotedString(from: trimmed) ?? componentName ?? "Button Action"
+                let key = "swiftui::\(lineNo)::\(label)"
+                if seen.insert(key).inserted {
+                    found.append(ComponentActionBinding(name: label, kind: .swiftUIButton, selectorName: label, lineNumber: lineNo, bodySnippet: snippet))
+                }
+            }
+        }
+        return found
+    }
+
+    private static func replaceNumericArg(in code: String, label: String, value: Double, decimals: Int = 0) -> String {
+        let formatted = decimals == 0 ? "\(Int(value.rounded()))" : String(format: "%.\(decimals)f", value)
+        let pattern = "(\(label)\\s*=\\s*)(-?[0-9]+(?:\\.[0-9]+)?)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return code }
+        let range = NSRange(code.startIndex..<code.endIndex, in: code)
+        return regex.stringByReplacingMatches(in: code, range: range, withTemplate: "$1\(formatted)")
+    }
+
+    private static func replaceBoolArg(in code: String, label: String, value: Bool) -> String {
+        let pattern = "(\(label)\\s*=\\s*)(true|false)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return code }
+        let range = NSRange(code.startIndex..<code.endIndex, in: code)
+        return regex.stringByReplacingMatches(in: code, range: range, withTemplate: "$1\(value ? "true" : "false")")
+    }
+
+    private static func replaceConstraintConstant(in code: String, anchor: String, value: Double?) -> String {
+        guard let value, code.contains(anchor) else { return code }
+        let pattern = "(\(anchor)[^\\n]*?(?:equalToConstant|constant):\\s*)(-?[0-9]+(?:\\.[0-9]+)?)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return code }
+        let range = NSRange(code.startIndex..<code.endIndex, in: code)
+        return regex.stringByReplacingMatches(in: code, range: range, withTemplate: "$1\(Int(value.rounded()))")
+    }
+
+    private static func extractConstraintConstant(in line: String, anchor: String) -> Double? {
+        guard line.contains(anchor) else { return nil }
+        let pattern = "(?:equalToConstant|constant):\\s*(-?[0-9]+(?:\\.[0-9]+)?)"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)),
+              let r = Range(match.range(at: 1), in: line) else {
+            return nil
+        }
+        return Double(line[r])
+    }
+
+    private static func extractSnapKitConstant(in line: String, edge: String) -> Double? {
+        guard line.contains(".\(edge).") else { return nil }
+        let pattern = "(?:equalTo|offset|inset)\\((-?[0-9]+(?:\\.[0-9]+)?)\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)),
+              let r = Range(match.range(at: 1), in: line) else {
+            return nil
+        }
+        return Double(line[r])
+    }
+
+    private static func extractFuncName(in line: String) -> String? {
+        let pattern = #"func\s+([A-Za-z_][A-Za-z0-9_]*)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)),
+              let r = Range(match.range(at: 1), in: line) else {
+            return nil
+        }
+        return String(line[r])
+    }
+
+    private static func extractSelectorName(in line: String) -> String? {
+        let pattern = #"#selector\((?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_:]*)\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)),
+              let r = Range(match.range(at: 1), in: line) else {
+            return nil
+        }
+        return String(line[r])
+    }
+
+    private static func sliceFunctionBody(lines: [String], startIndex: Int) -> String {
+        let end = min(lines.count - 1, startIndex + 7)
+        return lines[startIndex...end].joined(separator: "\n")
     }
 
     public static func defaultHierarchy(for appName: String) -> [UIComponentNode] {
