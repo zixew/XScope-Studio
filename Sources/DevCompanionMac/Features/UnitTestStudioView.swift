@@ -123,7 +123,7 @@ struct UnitTestStudioView: View {
                                         .lineSpacing(3.5)
                                         .foregroundStyle(CompanionTheme.textPrimary)
                                         .scrollContentBackground(.hidden)
-                                        .frame(minHeight: 240)
+                                        .frame(height: 280)
                                 }
 
                                 FlowLayout(spacing: 8) {
@@ -261,7 +261,7 @@ struct UnitTestStudioView: View {
                             }
 
                             CodeSurfaceContainer(padding: 12) {
-                                ScrollView {
+                                ScrollView([.vertical, .horizontal]) {
                                     if presenter.generatedTestCode.isEmpty {
                                         Text(AppStrings.UnitTest.previewEmpty)
                                             .font(.system(size: 12, design: .monospaced))
@@ -272,7 +272,7 @@ struct UnitTestStudioView: View {
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 }
-                                .frame(minHeight: 360)
+                                .frame(height: 420)
                             }
                         }
                     }
