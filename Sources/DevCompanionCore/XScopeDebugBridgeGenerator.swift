@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import ImageIO
 
 public struct DebugBridgeActionPayload: Sendable, Codable {
     public let selectorName: String
@@ -59,46 +61,71 @@ public struct XScopeDebugBridgeService: Sendable {
         }
     }
 
-    public func fetchHierarchy(port: UInt16 = defaultPort) async -> [UIComponentNode]? {
+    public func fetchHierarchy(port: UInt16 = defaultPort) async -> (nodes: [UIComponentNode], textures: [String: CGImage])? {
         guard let url = URL(string: "http://127.0.0.1:\(port)/hierarchy") else { return nil }
         var req = URLRequest(url: url)
-        req.timeoutInterval = 1.2
+        req.timeoutInterval = 1.8
         do {
             let (data, resp) = try await URLSession.shared.data(for: req)
-            guard (resp as? HTTPURLResponse)?.statusCode == 200,
-                  let rawItems = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-                return nil
-            }
-            let nodes: [UIComponentNode] = rawItems.enumerated().map { idx, item in
-                let cls = (item["className"] as? String) ?? "UIView"
-                let name = (item["name"] as? String) ?? cls
-                let kind = Self.kind(forClassName: cls)
-                return UIComponentNode(
-                    id: (item["id"] as? String) ?? "bridge-\(idx)",
-                    parentID: item["parentID"] as? String,
-                    depth: (item["depth"] as? Int) ?? 0,
-                    childCount: (item["childCount"] as? Int) ?? 0,
-                    className: cls,
-                    name: name,
-                    kind: kind,
-                    zLayer: min(3, (item["depth"] as? Int) ?? kind.defaultZLayer),
-                    normalizedX: (item["normalizedX"] as? Double) ?? 0,
-                    normalizedY: (item["normalizedY"] as? Double) ?? 0,
-                    normalizedWidth: (item["normalizedWidth"] as? Double) ?? 1,
-                    normalizedHeight: (item["normalizedHeight"] as? Double) ?? 1,
-                    fileName: "LiveBridge.swift",
-                    lineNumber: 1,
-                    codeSnippet: "// Live \(cls) (\(name))",
-                    displayText: (item["displayText"] as? String) ?? name,
-                    cornerRadius: (item["cornerRadius"] as? Double) ?? 0,
-                    opacity: (item["opacity"] as? Double) ?? 1.0,
-                    isHidden: (item["isHidden"] as? Bool) ?? false
-                )
-            }
-            return UIHierarchyInspectorService.buildHierarchyTree(from: nodes)
+            guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            return Self.parseHierarchyPayload(from: data)
         } catch {
             return nil
         }
+    }
+
+    public static func parseHierarchyPayload(from data: Data) -> (nodes: [UIComponentNode], textures: [String: CGImage])? {
+        guard let rawItems = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        var textures: [String: CGImage] = [:]
+        let nodes: [UIComponentNode] = rawItems.enumerated().map { idx, item in
+            let id = (item["id"] as? String) ?? "bridge-\(idx)"
+            let cls = (item["className"] as? String) ?? "UIView"
+            let name = (item["name"] as? String) ?? cls
+            let kind = Self.kind(forClassName: cls)
+
+            if let b64 = item["snapshotBase64"] as? String,
+               let imgData = Data(base64Encoded: b64),
+               let src = CGImageSourceCreateWithData(imgData as CFData, nil),
+               let cgImg = CGImageSourceCreateImageAtIndex(src, 0, nil) {
+                textures[id] = cgImg
+            }
+
+            let cDict = item["constraints"] as? [String: Any]
+            let constraints = ComponentConstraints(
+                leading: cDict?["leading"] as? Double,
+                top: cDict?["top"] as? Double,
+                width: cDict?["width"] as? Double,
+                height: cDict?["height"] as? Double
+            )
+
+            return UIComponentNode(
+                id: id,
+                parentID: item["parentID"] as? String,
+                depth: (item["depth"] as? Int) ?? 0,
+                childCount: (item["childCount"] as? Int) ?? 0,
+                className: cls,
+                name: name,
+                kind: kind,
+                zLayer: min(3, (item["depth"] as? Int) ?? kind.defaultZLayer),
+                normalizedX: (item["normalizedX"] as? Double) ?? 0,
+                normalizedY: (item["normalizedY"] as? Double) ?? 0,
+                normalizedWidth: (item["normalizedWidth"] as? Double) ?? 1,
+                normalizedHeight: (item["normalizedHeight"] as? Double) ?? 1,
+                fileName: "LiveBridge.swift",
+                lineNumber: 1,
+                codeSnippet: "// Live \(cls) (\(name))",
+                displayText: (item["displayText"] as? String) ?? name,
+                backgroundHex: (item["backgroundHex"] as? String) ?? "",
+                cornerRadius: (item["cornerRadius"] as? Double) ?? 0,
+                opacity: (item["opacity"] as? Double) ?? 1.0,
+                isHidden: (item["isHidden"] as? Bool) ?? false,
+                clipsToBounds: (item["clipsToBounds"] as? Bool) ?? false,
+                constraints: constraints
+            )
+        }
+        return (UIHierarchyInspectorService.buildHierarchyTree(from: nodes), textures)
     }
 
     private static func kind(forClassName cls: String) -> UIComponentNode.Kind {
@@ -267,6 +294,35 @@ public struct XScopeDebugBridgeService: Sendable {
                     .first(where: { $0.isKeyWindow })?.rootViewController
             }
 
+            private func hexColor(from color: UIColor?) -> String {
+                guard let color else { return "clear" }
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                color.getRed(&r, green: &g, blue: &b, alpha: &a)
+                if a < 0.02 { return "clear" }
+                return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+            }
+
+            private func isolatedSnapshotBase64(for view: UIView) -> String? {
+                guard !view.isHidden, view.bounds.width >= 4, view.bounds.height >= 4 else { return nil }
+                let shouldRender = view.subviews.isEmpty || (view is UIImageView) || (view is UILabel) || (view is UIButton) || (view is UINavigationBar) || (view is UITabBar)
+                guard shouldRender else { return nil }
+                let prevHidden = view.subviews.map { $0.isHidden }
+                view.subviews.forEach { $0.isHidden = true }
+                defer {
+                    for (sub, wasHidden) in zip(view.subviews, prevHidden) {
+                        sub.isHidden = wasHidden
+                    }
+                }
+                let format = UIGraphicsImageRendererFormat()
+                format.opaque = false
+                format.scale = 1.0
+                let renderer = UIGraphicsImageRenderer(size: view.bounds.size, format: format)
+                let image = renderer.image { ctx in
+                    view.layer.render(in: ctx.cgContext)
+                }
+                return image.pngData()?.base64EncodedString()
+            }
+
             private func dumpWindowHierarchyJSON() -> String {
                 guard let window = UIApplication.shared.connectedScenes
                     .compactMap({ $0 as? UIWindowScene })
@@ -282,7 +338,19 @@ public struct XScopeDebugBridgeService: Sendable {
                     let frameInWin = view.convert(view.bounds, to: window)
                     let cls = String(describing: type(of: view))
                     let label = view.accessibilityIdentifier ?? (view as? UILabel)?.text ?? (view as? UIButton)?.title(for: .normal) ?? cls
-                    items.append([
+                    var constraintsMap: [String: Double] = [:]
+                    let allConstraints = view.constraints + (view.superview?.constraints ?? [])
+                    for c in allConstraints where c.isActive {
+                        guard (c.firstItem as? UIView) === view else { continue }
+                        switch c.firstAttribute {
+                        case .leading, .left: constraintsMap["leading"] = Double(c.constant)
+                        case .top: constraintsMap["top"] = Double(c.constant)
+                        case .width: constraintsMap["width"] = Double(c.constant)
+                        case .height: constraintsMap["height"] = Double(c.constant)
+                        default: break
+                        }
+                    }
+                    var entry: [String: Any] = [
                         "id": nodeID,
                         "parentID": parentID as Any,
                         "depth": depth,
@@ -290,14 +358,21 @@ public struct XScopeDebugBridgeService: Sendable {
                         "className": cls,
                         "name": label,
                         "displayText": label,
+                        "backgroundHex": hexColor(from: view.backgroundColor),
                         "normalizedX": Double(frameInWin.origin.x / winW),
                         "normalizedY": Double(frameInWin.origin.y / winH),
                         "normalizedWidth": Double(frameInWin.size.width / winW),
                         "normalizedHeight": Double(frameInWin.size.height / winH),
                         "opacity": Double(view.alpha),
                         "isHidden": view.isHidden,
-                        "cornerRadius": Double(view.layer.cornerRadius)
-                    ])
+                        "clipsToBounds": view.clipsToBounds,
+                        "cornerRadius": Double(view.layer.cornerRadius),
+                        "constraints": constraintsMap
+                    ]
+                    if let snap = isolatedSnapshotBase64(for: view) {
+                        entry["snapshotBase64"] = snap
+                    }
+                    items.append(entry)
                     for sub in view.subviews {
                         walk(sub, parentID: nodeID, depth: depth + 1)
                     }

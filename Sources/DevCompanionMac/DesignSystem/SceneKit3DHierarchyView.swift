@@ -314,15 +314,19 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     containerOrder += 1
                 } else if isContainer {
                     // Intermediate structural containers (Card, TableView, CollectionView, StackView, ViewControllers):
-                    // Direct visual bars/cells may show their cropped texture; layout containers render as bounded translucent frames above UIView.
+                    // Direct visual bars/cells may show their cropped texture; layout containers respect backgroundHex ("clear" wireframe vs solid white/color).
                     let isDirectVisualContainer = (node.kind == .navigationBar || node.kind == .tabBar || node.kind == .cell)
                     if showContents, isDirectVisualContainer, let tex = croppedTextures[node.id] {
                         mat.diffuse.contents = tex
                         mat.transparency = CGFloat(node.opacity)
                     } else if isSelected {
                         mat.diffuse.contents = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42)
+                    } else if !showContents || node.backgroundHex.lowercased() == "clear" {
+                        mat.diffuse.contents = NSColor(white: 0.96, alpha: 0.04)
+                    } else if node.backgroundHex.hasPrefix("#") {
+                        mat.diffuse.contents = Self.nsColor(hex: node.backgroundHex).withAlphaComponent(0.95)
                     } else {
-                        mat.diffuse.contents = NSColor(white: 0.96, alpha: showContents ? 0.14 : 0.04)
+                        mat.diffuse.contents = NSColor(white: 0.96, alpha: 0.08)
                     }
                     containerOrder += 1
                 } else if node.isEdited {

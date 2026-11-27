@@ -505,16 +505,21 @@ final class SimulatorPresenter {
         }
 
         // 2. Try Live Debug Bridge GET /hierarchy first; fallback to Vision OCR/Rectangle + Swift AST
-        let bridgeNodes = await bridgeService.fetchHierarchy()
-        isDebugBridgeConnected = (bridgeNodes != nil)
+        let bridgeResult = await bridgeService.fetchHierarchy()
+        isDebugBridgeConnected = (bridgeResult != nil)
 
         let interactorRef = interactor
         let projURL = router.projectURL
         let screenFileURL = capturedURL
         let (cgImg, nodes, crops) = await Task.detached { () -> (CGImage?, [UIComponentNode], [String: CGImage]) in
             let decoded = screenFileURL.flatMap { UIHierarchyInspectorService.decodeImageInMemory(from: $0) }
-            let extracted = bridgeNodes ?? interactorRef.buildUIHierarchy(for: app, screenshotURL: screenFileURL, in: projURL)
-            let croppedMap = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: extracted) } ?? [:]
+            let extracted = bridgeResult?.nodes ?? interactorRef.buildUIHierarchy(for: app, screenshotURL: screenFileURL, in: projURL)
+            var croppedMap = decoded.map { UIHierarchyInspectorService.preCropTextures(from: $0, nodes: extracted) } ?? [:]
+            if let bridgeTextures = bridgeResult?.textures {
+                for (id, tex) in bridgeTextures {
+                    croppedMap[id] = tex
+                }
+            }
             return (decoded, extracted, croppedMap)
         }.value
 

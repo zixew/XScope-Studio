@@ -471,4 +471,53 @@ struct SimulatorXIBAndActionTests {
             #expect(loginNode.fileName != "FormDPLKVC.swift")
         }
     }
+
+    @Test("TC-AUT-037: XScopeDebugBridgeService.parseHierarchyPayload decodes isolated snapshotBase64, backgroundHex, and live constraints")
+    func testBridgeHierarchyPayloadDecodesSnapshotAndConstraints() throws {
+        // 1x1 PNG base64
+        let tinyPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+        let payload: [[String: Any]] = [
+            [
+                "id": "win-0",
+                "depth": 0,
+                "childCount": 1,
+                "className": "UIWindow",
+                "name": "UIWindow",
+                "backgroundHex": "#FFFFFF",
+                "normalizedX": 0.0,
+                "normalizedY": 0.0,
+                "normalizedWidth": 1.0,
+                "normalizedHeight": 1.0
+            ],
+            [
+                "id": "btn-1",
+                "parentID": "win-0",
+                "depth": 1,
+                "childCount": 0,
+                "className": "UIButton",
+                "name": "Login",
+                "displayText": "Login",
+                "backgroundHex": "#0A84FF",
+                "clipsToBounds": true,
+                "normalizedX": 0.1,
+                "normalizedY": 0.85,
+                "normalizedWidth": 0.8,
+                "normalizedHeight": 0.06,
+                "constraints": ["leading": 16.0, "height": 48.0],
+                "snapshotBase64": tinyPNG
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let parsed = XScopeDebugBridgeService.parseHierarchyPayload(from: data)
+        #expect(parsed != nil)
+        #expect(parsed?.nodes.count == 2)
+        #expect(parsed?.textures["btn-1"] != nil)
+        #expect(parsed?.textures["win-0"] == nil)
+
+        let btn = parsed?.nodes.first(where: { $0.id == "btn-1" })
+        #expect(btn?.backgroundHex == "#0A84FF")
+        #expect(btn?.clipsToBounds == true)
+        #expect(btn?.constraints.leading == 16.0)
+        #expect(btn?.constraints.height == 48.0)
+    }
 }
