@@ -359,9 +359,22 @@ struct SimulatorControlsView: View {
                                         }
                                     } label: {
                                         HStack(spacing: 6) {
-                                            Image(systemName: node.kind.iconName)
-                                                .font(.system(size: 10))
-                                                .foregroundStyle(isSelected ? CompanionTheme.accent : Color(hex: node.accentHex))
+                                            // Authentic Xcode Object Tree Badges
+                                            if node.className.contains("ViewController") || node.name.contains("VC") {
+                                                Image(systemName: "record.circle.fill")
+                                                    .font(.system(size: 10))
+                                                    .foregroundStyle(Color(red: 0.95, green: 0.72, blue: 0.22))
+                                            } else if node.kind == .label {
+                                                Text("L")
+                                                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                                                    .foregroundStyle(Color.white)
+                                                    .frame(width: 12, height: 12)
+                                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.22, green: 0.58, blue: 0.98)))
+                                            } else {
+                                                Image(systemName: node.kind.iconName)
+                                                    .font(.system(size: 10))
+                                                    .foregroundStyle(isSelected ? CompanionTheme.accent : Color(hex: node.accentHex))
+                                            }
 
                                             VStack(alignment: .leading, spacing: 1) {
                                                 HStack(spacing: 4) {
@@ -509,7 +522,7 @@ struct SimulatorControlsView: View {
 
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.14, green: 0.15, blue: 0.18).opacity(0.92))
+                                    .fill(Color(red: 0.11, green: 0.12, blue: 0.14))
 
                                 if presenter.renderMode == .render2D {
                                     deviceStagePlane(zLayerFilter: nil)

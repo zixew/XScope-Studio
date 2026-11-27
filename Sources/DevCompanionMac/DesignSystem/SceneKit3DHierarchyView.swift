@@ -47,7 +47,8 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> SCNView {
         let scnView = SCNView()
-        scnView.backgroundColor = .clear
+        // Signature Xcode View Debugger solid dark canvas background (#1E1E22 / #1C1D21)
+        scnView.backgroundColor = NSColor(srgbRed: 0.11, green: 0.12, blue: 0.14, alpha: 1.0)
         scnView.antialiasingMode = .multisampling4X
         scnView.allowsCameraControl = false
         scnView.autoenablesDefaultLighting = false
@@ -302,15 +303,21 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     // Root UIWindow plane at the very back: shows base screen context in Contents/Both mode, or dark frame in Wireframes mode
                     if showContents, let fullImage {
                         mat.diffuse.contents = fullImage
-                        mat.transparency = 0.88
+                        mat.transparency = isSelected ? 0.95 : 0.88
                     } else {
-                        mat.diffuse.contents = NSColor(srgbRed: 0.08, green: 0.10, blue: 0.14, alpha: 0.55)
+                        mat.diffuse.contents = isSelected
+                            ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.45)
+                            : NSColor(srgbRed: 0.08, green: 0.10, blue: 0.14, alpha: 0.55)
                     }
                     containerOrder += 1
                 } else if isContainer {
-                    // Intermediate structural containers (Card, TableView, CollectionView, StackView):
-                    // Render as clean translucent frosted-glass / wireframe planes (NEVER opaque grey blocks or duplicated child screenshots!)
-                    mat.diffuse.contents = NSColor(srgbRed: 0.78, green: 0.84, blue: 0.94, alpha: showContents ? 0.14 : 0.04)
+                    // Intermediate structural containers (Card, TableView, CollectionView, StackView, ViewControllers):
+                    // Render as authentic Xcode frosted-glass cards (white translucent) or royal blue selection highlight
+                    if isSelected {
+                        mat.diffuse.contents = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42)
+                    } else {
+                        mat.diffuse.contents = NSColor(white: 0.96, alpha: showContents ? 0.16 : 0.04)
+                    }
                     containerOrder += 1
                 } else if node.isEdited {
                     mat.diffuse.contents = Self.renderEditedTexture(node: node, size: CGSize(width: max(140, w * 90), height: max(48, h * 90)))
@@ -319,10 +326,10 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                     mat.diffuse.contents = tex
                     mat.transparency = CGFloat(node.opacity)
                 } else if showContents {
-                    let accent = Self.nsColor(hex: node.accentHex)
-                    mat.diffuse.contents = accent.withAlphaComponent(isSelected ? 0.35 : 0.16)
+                    let accent = isSelected ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.42) : Self.nsColor(hex: node.accentHex)
+                    mat.diffuse.contents = accent.withAlphaComponent(isSelected ? 0.42 : 0.16)
                 } else {
-                    mat.diffuse.contents = NSColor.white.withAlphaComponent(0.02)
+                    mat.diffuse.contents = isSelected ? NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.35) : NSColor.white.withAlphaComponent(0.02)
                 }
 
                 plane.materials = [mat]
@@ -330,15 +337,29 @@ struct SceneKit3DHierarchyView: NSViewRepresentable {
                 scnNode.name = node.id
                 scnNode.position = SCNVector3(cx, cy, zPos + (isSelected ? 0.02 : 0.0))
 
+                // If a leaf component is selected in Contents mode, overlay Xcode transparent blue selection tint
+                if isSelected && !isContainer && node.kind != .window {
+                    let selOverlay = SCNPlane(width: w, height: h)
+                    selOverlay.cornerRadius = plane.cornerRadius
+                    let selMat = SCNMaterial()
+                    selMat.lightingModel = .constant
+                    selMat.isDoubleSided = true
+                    selMat.diffuse.contents = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 0.38)
+                    selOverlay.materials = [selMat]
+                    let selNode = SCNNode(geometry: selOverlay)
+                    selNode.position = SCNVector3(0, 0, 0.003)
+                    scnNode.addChildNode(selNode)
+                }
+
                 // Wireframe outline / Xcode sky-blue selection highlight
                 if isSelected || showWireframes || isContainer {
                     let xcodeBlue = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 1.0)
                     let borderColor: NSColor = isSelected
                         ? xcodeBlue
                         : (isContainer
-                            ? NSColor(srgbRed: 0.55, green: 0.62, blue: 0.72, alpha: 0.65)
-                            : NSColor(srgbRed: 0.64, green: 0.72, blue: 0.82, alpha: 0.52))
-                    let thickness: CGFloat = isSelected ? 0.028 : (isContainer ? 0.011 : 0.008)
+                            ? NSColor(white: 0.92, alpha: 0.55)
+                            : NSColor(srgbRed: 0.64, green: 0.72, blue: 0.82, alpha: 0.45))
+                    let thickness: CGFloat = isSelected ? 0.026 : (isContainer ? 0.010 : 0.007)
                     let borderNode = Self.makeBorderNode(width: w, height: h, color: borderColor, thickness: thickness)
                     borderNode.position = SCNVector3(0, 0, 0.004)
                     scnNode.addChildNode(borderNode)
