@@ -427,4 +427,48 @@ struct SimulatorXIBAndActionTests {
         )
         #expect(!report.formattedDateString.isEmpty)
     }
+
+    @Test("TC-AUT-036: UIHierarchyInspectorService scopes source matching to active screen folder and ignores unrelated VC comments")
+    func testActiveScreenContextScopesToActiveModule() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ScopeMatch_\(UUID().uuidString)")
+        let dashDir = root.appendingPathComponent("Dashboard")
+        let dplkDir = root.appendingPathComponent("DPLK")
+        try FileManager.default.createDirectory(at: dashDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dplkDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let dplkSource = """
+        final class FormDPLKVC: UIViewController {
+            /// Variabel isi form login
+            let titleLabel = UILabel()
+            func setup() { titleLabel.text = "DPLK" }
+        }
+        """
+        try dplkSource.write(to: dplkDir.appendingPathComponent("FormDPLKVC.swift"), atomically: true, encoding: .utf8)
+
+        let dashSource = """
+        final class DashboardRevampVC: UIViewController {
+            let fastMenuBtn = UIButton()
+            let loginBtn = UIButton()
+            let brizziLabel = UILabel()
+            func setupUI() {
+                fastMenuBtn.setTitle("Fast Menu", for: .normal)
+                loginBtn.setTitle("Login", for: .normal)
+                brizziLabel.text = "BRIZZI"
+            }
+        }
+        """
+        try dashSource.write(to: dashDir.appendingPathComponent("DashboardRevampVC.swift"), atomically: true, encoding: .utf8)
+
+        let svc = UIHierarchyInspectorService()
+        let proc = SimulatorProcessInfo(id: 100, name: "BRImoOCP")
+        let nodes = svc.buildHierarchy(for: proc, in: root)
+        #expect(!nodes.isEmpty)
+
+        // None of the nodes from DashboardRevampVC should ever be mapped to FormDPLKVC.swift
+        let loginNode = nodes.first(where: { $0.displayText.localizedCaseInsensitiveContains("Login") || $0.name.localizedCaseInsensitiveContains("login") })
+        if let loginNode {
+            #expect(loginNode.fileName != "FormDPLKVC.swift")
+        }
+    }
 }

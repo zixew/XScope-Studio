@@ -558,128 +558,161 @@ struct SimulatorControlsView: View {
                             .frame(maxWidth: .infinity, minHeight: 460)
 
                             // Xcode Bottom View Debugger Canvas Bar (Spacing | Orient | Clipped | Constraints | Display Mode | Zoom | Depth Clip)
-                            HStack(spacing: 8) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "square.3.layers.3d.down.right")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(CompanionTheme.textSecondary)
-                                    Slider(value: $presenter.layerSpacing, in: 8...68)
-                                        .frame(width: 72)
-                                        .help("Adjust view layer spacing")
-                                }
-
-                                HStack(spacing: 2) {
-                                    ForEach(SceneKitCameraPreset.allCases) { preset in
-                                        Button {
-                                            presenter.setCameraPreset(preset)
-                                        } label: {
-                                            Text(preset.rawValue)
-                                                .font(.system(size: 9, weight: presenter.cameraPreset == preset ? .bold : .medium))
-                                                .foregroundStyle(presenter.cameraPreset == preset ? Color.white : CompanionTheme.textSecondary)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 4)
-                                                        .fill(presenter.cameraPreset == preset ? CompanionTheme.accent.opacity(0.75) : Color.clear)
-                                                )
-                                        }
-                                        .buttonStyle(.plain)
-                                        .help("Orient views to \(preset.rawValue)")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "square.3.layers.3d.down.right")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(CompanionTheme.textSecondary)
+                                        Slider(value: $presenter.layerSpacing, in: 8...68)
+                                            .frame(width: 68)
+                                            .help("Adjust view layer spacing")
                                     }
-                                }
-                                .padding(2)
-                                .background(RoundedRectangle(cornerRadius: 5).fill(CompanionTheme.glassLow))
+                                    .fixedSize()
 
-                                Button {
-                                    presenter.showClippedContent.toggle()
-                                } label: {
-                                    Image(systemName: "rectangle.dashed")
-                                        .font(.system(size: 10.5))
-                                        .foregroundStyle(presenter.showClippedContent ? Color.white : CompanionTheme.textSecondary)
-                                        .padding(4)
-                                        .background(RoundedRectangle(cornerRadius: 5).fill(presenter.showClippedContent ? CompanionTheme.accent : Color.clear))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Show Clipped & Hidden Views")
+                                    HStack(spacing: 2) {
+                                        ForEach(SceneKitCameraPreset.allCases) { preset in
+                                            Button {
+                                                presenter.setCameraPreset(preset)
+                                            } label: {
+                                                Text(preset.rawValue)
+                                                    .font(.system(size: 9.5, weight: presenter.cameraPreset == preset ? .bold : .medium))
+                                                    .foregroundStyle(presenter.cameraPreset == preset ? Color.white : CompanionTheme.textSecondary)
+                                                    .lineLimit(1)
+                                                    .fixedSize()
+                                                    .padding(.horizontal, 7)
+                                                    .padding(.vertical, 3.5)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 4)
+                                                            .fill(presenter.cameraPreset == preset ? CompanionTheme.accent.opacity(0.85) : Color.clear)
+                                                    )
+                                            }
+                                            .buttonStyle(.plain)
+                                            .fixedSize()
+                                            .help("Orient views to \(preset.rawValue)")
+                                        }
+                                    }
+                                    .padding(2)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(CompanionTheme.glassLow))
+                                    .fixedSize()
 
-                                Button {
-                                    presenter.show3DConstraints.toggle()
-                                } label: {
-                                    Image(systemName: "ruler")
-                                        .font(.system(size: 10.5))
-                                        .foregroundStyle(presenter.show3DConstraints ? Color.white : CompanionTheme.textSecondary)
-                                        .padding(4)
-                                        .background(RoundedRectangle(cornerRadius: 5).fill(presenter.show3DConstraints ? CompanionTheme.accent : Color.clear))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Show AutoLayout Constraints in 3D")
+                                    Button {
+                                        presenter.showClippedContent.toggle()
+                                    } label: {
+                                        Image(systemName: "rectangle.dashed")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(presenter.showClippedContent ? Color.white : CompanionTheme.textSecondary)
+                                            .padding(4.5)
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(presenter.showClippedContent ? CompanionTheme.accent : Color.clear))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .fixedSize()
+                                    .help("Show Clipped & Hidden Views")
 
-                                Spacer(minLength: 4)
+                                    Button {
+                                        presenter.show3DConstraints.toggle()
+                                    } label: {
+                                        Image(systemName: "ruler")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(presenter.show3DConstraints ? Color.white : CompanionTheme.textSecondary)
+                                            .padding(4.5)
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(presenter.show3DConstraints ? CompanionTheme.accent : Color.clear))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .fixedSize()
+                                    .help("Show AutoLayout Constraints in 3D")
 
-                                HStack(spacing: 2) {
-                                    ForEach(HierarchyDisplayMode.allCases) { mode in
-                                        let active = presenter.displayMode == mode
-                                        Button {
-                                            presenter.displayMode = mode
-                                            presenter.showWireframesOnly = (mode == .wireframes)
-                                        } label: {
-                                            Text(mode.rawValue)
-                                                .font(.system(size: 9, weight: active ? .bold : .medium))
+                                    // Compact Xcode-style Display Mode (Wireframes | Both | Contents)
+                                    HStack(spacing: 2) {
+                                        ForEach(HierarchyDisplayMode.allCases) { mode in
+                                            let active = presenter.displayMode == mode
+                                            let iconName: String = switch mode {
+                                            case .wireframes: "square.dashed"
+                                            case .wireframesAndContents: "square.on.square"
+                                            case .contents: "photo"
+                                            }
+                                            Button {
+                                                presenter.displayMode = mode
+                                                presenter.showWireframesOnly = (mode == .wireframes)
+                                            } label: {
+                                                HStack(spacing: 3) {
+                                                    Image(systemName: iconName)
+                                                        .font(.system(size: 9.5, weight: .semibold))
+                                                    Text(mode.rawValue)
+                                                        .font(.system(size: 9.5, weight: active ? .bold : .medium))
+                                                        .lineLimit(1)
+                                                        .fixedSize()
+                                                }
                                                 .foregroundStyle(active ? Color.white : CompanionTheme.textSecondary)
-                                                .padding(.horizontal, 7)
-                                                .padding(.vertical, 3)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3.5)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 4)
                                                         .fill(active ? CompanionTheme.accent : Color.clear)
                                                 )
+                                            }
+                                            .buttonStyle(.plain)
+                                            .fixedSize()
+                                            .help("Display Mode: \(mode.rawValue)")
+                                        }
+                                    }
+                                    .padding(2)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
+                                    .fixedSize()
+
+                                    HStack(spacing: 3) {
+                                        Button {
+                                            presenter.canvasZoom = max(0.55, presenter.canvasZoom - 0.15)
+                                        } label: {
+                                            Image(systemName: "minus.magnifyingglass")
+                                                .font(.system(size: 10))
                                         }
                                         .buttonStyle(.plain)
+                                        .help("Zoom Out")
+
+                                        Text("\(Int((presenter.canvasZoom * 100).rounded()))%")
+                                            .font(.system(size: 9.5, design: .monospaced))
+                                            .foregroundStyle(CompanionTheme.textSecondary)
+                                            .frame(width: 34)
+
+                                        Button {
+                                            presenter.canvasZoom = min(2.2, presenter.canvasZoom + 0.15)
+                                        } label: {
+                                            Image(systemName: "plus.magnifyingglass")
+                                                .font(.system(size: 10))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Zoom In")
                                     }
-                                }
-                                .padding(2)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(CompanionTheme.glassLow))
+                                    .fixedSize()
 
-                                HStack(spacing: 3) {
-                                    Button {
-                                        presenter.canvasZoom = max(0.55, presenter.canvasZoom - 0.15)
-                                    } label: {
-                                        Image(systemName: "minus.magnifyingglass")
-                                            .font(.system(size: 10))
+                                    HStack(spacing: 4) {
+                                        Text("Clip")
+                                            .font(.system(size: 9.5, weight: .medium))
+                                            .foregroundStyle(CompanionTheme.textMuted)
+                                            .fixedSize()
+                                        Slider(value: $presenter.minDepthRatio, in: 0.0...0.85)
+                                            .frame(width: 44)
+                                            .help("Clip Back Layers")
+                                        Slider(value: $presenter.maxDepthRatio, in: 0.15...1.0)
+                                            .frame(width: 44)
+                                            .help("Clip Front Layers")
+                                        if presenter.minDepthRatio > 0.01 || presenter.maxDepthRatio < 0.99 || presenter.componentNodes.contains(where: \.isHidden) {
+                                            Button("Reset") {
+                                                presenter.minDepthRatio = 0.0
+                                                presenter.maxDepthRatio = 1.0
+                                                presenter.resetHiddenViews()
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .controlSize(.mini)
+                                            .fixedSize()
+                                        }
                                     }
-                                    .buttonStyle(.plain)
-                                    .help("Zoom Out")
-
-                                    Text("\(Int((presenter.canvasZoom * 100).rounded()))%")
-                                        .font(.system(size: 9, design: .monospaced))
-                                        .foregroundStyle(CompanionTheme.textSecondary)
-                                        .frame(width: 32)
-
-                                    Button {
-                                        presenter.canvasZoom = min(2.2, presenter.canvasZoom + 0.15)
-                                    } label: {
-                                        Image(systemName: "plus.magnifyingglass")
-                                            .font(.system(size: 10))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .help("Zoom In")
+                                    .fixedSize()
                                 }
-
-                                Spacer(minLength: 4)
-
-                                HStack(spacing: 4) {
-                                    Text("Clip")
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundStyle(CompanionTheme.textMuted)
-                                    Slider(value: $presenter.minDepthRatio, in: 0.0...0.85)
-                                        .frame(width: 48)
-                                        .help("Clip Back Layers")
-                                    Slider(value: $presenter.maxDepthRatio, in: 0.15...1.0)
-                                        .frame(width: 48)
-                                        .help("Clip Front Layers")
-                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: 8).fill(CompanionTheme.glassLow))
                         }
                     }

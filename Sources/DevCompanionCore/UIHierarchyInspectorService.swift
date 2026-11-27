@@ -788,49 +788,80 @@ public struct UIHierarchyInspectorService: Sendable {
         }
 
         let screenFiles = cachedScreenFiles(in: projectURL)
-        var textMatches: [String: ScreenSourceMatch] = [:]
         var bestScreenFile: (url: URL, score: Int, content: String)?
 
+        // Pass 1: Score all candidate screen files using non-comment code lines to identify the true active ViewController/View.
         for fileURL in screenFiles {
             guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
-            var hitCount = 0
+            var score = 0
+            let codeLines = content.components(separatedBy: .newlines).filter {
+                let t = $0.trimmingCharacters(in: .whitespaces)
+                return !t.isEmpty && !t.hasPrefix("//") && !t.hasPrefix("/*") && !t.hasPrefix("*")
+            }
+            let codeBody = codeLines.joined(separator: "\n")
             for needle in needles {
-                if content.localizedCaseInsensitiveContains("\"\(needle)\"") || content.localizedCaseInsensitiveContains(needle) {
-                    hitCount += 1
-                    if textMatches[needle] == nil {
-                        let lines = content.components(separatedBy: .newlines)
-                        if let lineIdx = lines.firstIndex(where: { $0.localizedCaseInsensitiveContains(needle) }) {
-                            textMatches[needle] = ScreenSourceMatch(
-                                fileName: fileURL.lastPathComponent,
-                                filePath: fileURL.path,
-                                lineNumber: lineIdx + 1,
-                                snippet: lines[lineIdx].trimmingCharacters(in: .whitespaces)
-                            )
-                        }
-                    }
+                if codeBody.localizedCaseInsensitiveContains("\"\(needle)\"") {
+                    score += 3
+                } else if codeBody.localizedCaseInsensitiveContains(needle) {
+                    score += 1
                 }
             }
-
-            if hitCount > 0 {
-                if bestScreenFile == nil || hitCount > bestScreenFile!.score {
-                    bestScreenFile = (fileURL, hitCount, content)
-                }
+            if score > 0, bestScreenFile == nil || score > bestScreenFile!.score {
+                bestScreenFile = (fileURL, score, content)
             }
         }
 
         var primaryMatch: ScreenSourceMatch?
+        var textMatches: [String: ScreenSourceMatch] = [:]
         var parsedComponents: [ParsedSwiftUIComponent] = []
 
+        // Pass 2: Scope textMatches strictly to `bestScreenFile` and its same-folder/feature subviews/cells.
         if let best = bestScreenFile {
-            let lines = best.content.components(separatedBy: .newlines)
-            let classLineIdx = lines.firstIndex(where: { $0.contains("class ") || $0.contains("struct ") }) ?? 0
+            let bestLines = best.content.components(separatedBy: .newlines)
+            let classLineIdx = bestLines.firstIndex(where: { $0.contains("class ") || $0.contains("struct ") }) ?? 0
             primaryMatch = ScreenSourceMatch(
                 fileName: best.url.lastPathComponent,
                 filePath: best.url.path,
                 lineNumber: classLineIdx + 1,
-                snippet: lines[classLineIdx].trimmingCharacters(in: .whitespaces)
+                snippet: bestLines[classLineIdx].trimmingCharacters(in: .whitespaces)
             )
-            for (idx, rawLine) in lines.enumerated() {
+
+            let bestDir = best.url.deletingLastPathComponent().standardizedFileURL.path
+            let scopedFiles: [(url: URL, lines: [String])] = [(best.url, bestLines)] + screenFiles.compactMap { url in
+                guard url != best.url else { return nil }
+                let dir = url.deletingLastPathComponent().standardizedFileURL.path
+                guard dir == bestDir || dir.hasPrefix(bestDir + "/") else { return nil }
+                guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+                return (url, content.components(separatedBy: .newlines))
+            }
+
+            for needle in needles {
+                var matched: ScreenSourceMatch?
+                for file in scopedFiles {
+                    if let lineIdx = file.lines.firstIndex(where: { line in
+                        let t = line.trimmingCharacters(in: .whitespaces)
+                        guard !t.isEmpty, !t.hasPrefix("//"), !t.hasPrefix("/*"), !t.hasPrefix("*") else { return false }
+                        return t.localizedCaseInsensitiveContains("\"\(needle)\"")
+                    }) ?? file.lines.firstIndex(where: { line in
+                        let t = line.trimmingCharacters(in: .whitespaces)
+                        guard !t.isEmpty, !t.hasPrefix("//"), !t.hasPrefix("/*"), !t.hasPrefix("*") else { return false }
+                        return t.localizedCaseInsensitiveContains(needle)
+                    }) {
+                        matched = ScreenSourceMatch(
+                            fileName: file.url.lastPathComponent,
+                            filePath: file.url.path,
+                            lineNumber: lineIdx + 1,
+                            snippet: file.lines[lineIdx].trimmingCharacters(in: .whitespaces)
+                        )
+                        break
+                    }
+                }
+                if let matched {
+                    textMatches[needle] = matched
+                }
+            }
+
+            for (idx, rawLine) in bestLines.enumerated() {
                 let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.hasPrefix("//"), !trimmed.isEmpty else { continue }
                 if let detected = Self.classifyComponentLine(trimmed) {
